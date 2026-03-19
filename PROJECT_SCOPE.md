@@ -20,5 +20,5 @@ Planned scope:
 
 Notes:
 
-- Keep this folder independent from the original `employee-loan-system` and `business-loan-management-system`.
+- Keep this folder independent from the original scaffold and the `business-loan-management-system` folder.
 - All project-specific refactoring should happen here.

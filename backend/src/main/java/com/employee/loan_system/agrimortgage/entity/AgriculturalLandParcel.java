@@ -14,7 +14,9 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -49,6 +51,7 @@ public class AgriculturalLandParcel {
     private BigDecimal areaInAcres;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "land_type", nullable = false, length = 30)
     private LandType landType;
 
@@ -59,10 +62,12 @@ public class AgriculturalLandParcel {
     private BigDecimal govtCircleRate;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "ownership_status", nullable = false, length = 30)
     private OwnershipStatus ownershipStatus = OwnershipStatus.SOLE;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "encumbrance_status", nullable = false, length = 30)
     private EncumbranceStatus encumbranceStatus = EncumbranceStatus.PENDING;
 

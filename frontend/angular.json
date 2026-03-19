@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "employee": {
+    "agri-mortgage-loan-system": {
       "projectType": "application",
       "schematics": {},
       "root": "",
@@ -13,7 +13,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": "dist/employee",
+            "outputPath": "dist/agri-mortgage-loan-system",
             "index": "src/index.html",
             "browser": "src/main.ts",
             "polyfills": [
@@ -66,10 +66,10 @@
           },
           "configurations": {
             "production": {
-              "buildTarget": "employee:build:production"
+              "buildTarget": "agri-mortgage-loan-system:build:production"
             },
             "development": {
-              "buildTarget": "employee:build:development"
+              "buildTarget": "agri-mortgage-loan-system:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -77,7 +77,7 @@
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "buildTarget": "employee:build"
+            "buildTarget": "agri-mortgage-loan-system:build"
           }
         },
         "test": {

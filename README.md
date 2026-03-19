@@ -1,6 +1,6 @@
 # Agri Mortgage Loan System
 
-Agri Mortgage Loan System is a Spring Boot backend for agricultural mortgage lending workflows. It focuses on borrower onboarding, land verification, eligibility checks, approval state tracking, and reporting.
+Agri Mortgage Loan System is a backend-first Spring Boot project for agricultural mortgage lending workflows. It covers borrower onboarding, land verification, eligibility checks, approval state tracking, and reporting.
 
 ## Tech Stack
 
@@ -52,4 +52,5 @@ Ports:
 ## Notes
 
 - Authentication and access control are role-based.
-- The project is designed to be interview-ready and easy to explain as a backend system.
+- The Angular frontend folder is reserved for the dashboard shell and dev-server configuration.
+- This project is designed to be interview-ready and easy to explain as a backend system.
