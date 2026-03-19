@@ -1,0 +1,13 @@
+# Frontend build context
+.git
+node_modules
+dist
+.angular
+coverage
+
+# IDE
+.vscode
+.idea
+
+# OS
+*.log

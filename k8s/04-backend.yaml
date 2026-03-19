@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agri-mortgage-backend
+  namespace: agri-mortgage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agri-mortgage-backend
+  template:
+    metadata:
+      labels:
+        app: agri-mortgage-backend
+    spec:
+      containers:
+        - name: backend
+          image: agri-mortgage-loan-system:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8011
+          envFrom:
+            - configMapRef:
+                name: agri-mortgage-config
+            - secretRef:
+                name: agri-mortgage-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agri-mortgage-backend
+  namespace: agri-mortgage
+spec:
+  selector:
+    app: agri-mortgage-backend
+  ports:
+    - port: 80
+      targetPort: 8011
