@@ -1,0 +1,365 @@
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar__logo">
+      <div class="logo-icon"></div>
+      <h2>AgriMortgage</h2>
+    </div>
+    <nav class="sidebar__nav">
+      <button [class.active]="activeTab === 'dashboard'" (click)="setTab('dashboard')">Overview</button>
+      <button [class.active]="activeTab === 'intake'" (click)="setTab('intake')">Intake form</button>
+      <button [class.active]="activeTab === 'search'" (click)="setTab('search')">Applications</button>
+      <button [class.active]="activeTab === 'operations'" (click)="setTab('operations')">Operations</button>
+    </nav>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <h1>{{ title }}</h1>
+      <div class="topbar__actions">
+        <span class="api-note">API: <strong>{{ apiBaseUrl }}</strong></span>
+        <button type="button" class="primary ghost" (click)="refreshSummary()">Refresh Data</button>
+      </div>
+    </header>
+    
+    <div style="margin-bottom: 24px;" *ngIf="notice">
+      <div class="status" data-kind="info">{{ notice }}</div>
+    </div>
+
+  <section class="hero animated-panel" *ngIf="activeTab === 'dashboard'">
+    <div class="hero__copy">
+      <div class="eyebrow">Agricultural workflow</div>
+      <h2>Welcome back</h2>
+      <p>
+        Manage agricultural mortgages, land appraisals, eligibility checks, and overall pipeline reporting correctly in one interface.
+      </p>
+    </div>
+
+    <div class="hero__metrics">
+      <article class="metric" *ngFor="let card of summaryCards" [attr.data-accent]="card.accent">
+        <span>{{ card.label }}</span>
+        <strong>{{ card.value }}</strong>
+      </article>
+    </div>
+  </section>
+
+  <section class="view-container">
+    <article class="panel animated-panel" *ngIf="activeTab === 'intake'">
+      <header class="panel__header">
+        <h2>Create application</h2>
+        <div class="chip">Draft builder</div>
+      </header>
+
+      <form class="form" [formGroup]="applicationForm">
+        <div class="row">
+          <label>
+            Primary applicant
+            <input type="text" formControlName="primaryApplicantName" placeholder="Primary applicant name">
+          </label>
+          <label>
+            Aadhaar
+            <input type="text" formControlName="primaryApplicantAadhaar" placeholder="999988887777" maxlength="12">
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            PAN
+            <input type="text" formControlName="primaryApplicantPan" placeholder="ABCDE1234F">
+          </label>
+          <label>
+            Monthly income
+            <input type="number" formControlName="primaryMonthlyIncome" min="1" step="1">
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            District
+            <input type="text" formControlName="district" placeholder="Pune">
+          </label>
+          <label>
+            Taluka
+            <input type="text" formControlName="taluka" placeholder="Haveli">
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            Village
+            <input type="text" formControlName="village" placeholder="Wagholi">
+          </label>
+          <label>
+            Requested amount
+            <input type="number" formControlName="requestedAmount" min="1" step="1">
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            Tenure months
+            <input type="number" formControlName="requestedTenureMonths" min="1" step="1">
+          </label>
+          <label>
+            Purpose
+            <textarea rows="3" formControlName="purpose" placeholder="Irrigation equipment and farm improvement"></textarea>
+          </label>
+        </div>
+
+        <div class="section-subtitle">
+          Co-borrowers
+          <button type="button" class="tiny" (click)="addCoBorrower()">Add co-borrower</button>
+        </div>
+        <div formArrayName="coBorrowers" class="stack">
+          <div class="subcard" *ngFor="let control of coBorrowersArray.controls; let i = index" [formGroupName]="i">
+            <div class="row">
+              <label>
+                Full name
+                <input type="text" formControlName="fullName">
+              </label>
+              <label>
+                Aadhaar
+                <input type="text" formControlName="aadhaar" maxlength="12">
+              </label>
+            </div>
+            <div class="row">
+              <label>
+                PAN
+                <input type="text" formControlName="pan">
+              </label>
+              <label>
+                Monthly income
+                <input type="number" formControlName="monthlyIncome" min="1" step="1">
+              </label>
+            </div>
+            <div class="row">
+              <label>
+                Relationship
+                <select formControlName="relationshipType">
+                  <option *ngFor="let type of relationshipTypes" [value]="type">{{ type }}</option>
+                </select>
+              </label>
+              <div class="inline-actions">
+                <button type="button" class="tiny danger" (click)="removeCoBorrower(i)" [disabled]="coBorrowersArray.length === 1">Remove</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-subtitle">
+          Land parcels
+          <button type="button" class="tiny" (click)="addLandParcel()">Add parcel</button>
+        </div>
+        <div formArrayName="landParcels" class="stack">
+          <div class="subcard" *ngFor="let control of landParcelsArray.controls; let i = index" [formGroupName]="i">
+            <div class="row">
+              <label>
+                Survey number
+                <input type="text" formControlName="surveyNumber">
+              </label>
+              <label>
+                Area in acres
+                <input type="number" formControlName="areaInAcres" min="0.01" step="0.01">
+              </label>
+            </div>
+            <div class="row">
+              <label>
+                District
+                <input type="text" formControlName="district">
+              </label>
+              <label>
+                Taluka
+                <input type="text" formControlName="taluka">
+              </label>
+            </div>
+            <div class="row">
+              <label>
+                Village
+                <input type="text" formControlName="village">
+              </label>
+              <label>
+                Land type
+                <select formControlName="landType">
+                  <option *ngFor="let type of landTypes" [value]="type">{{ type }}</option>
+                </select>
+              </label>
+            </div>
+            <div class="row">
+              <label>
+                Market value
+                <input type="number" formControlName="marketValue" min="1" step="1">
+              </label>
+              <label>
+                Govt. circle rate
+                <input type="number" formControlName="govtCircleRate" min="1" step="1">
+              </label>
+            </div>
+            <div class="row">
+              <label>
+                Ownership status
+                <select formControlName="ownershipStatus">
+                  <option *ngFor="let type of ownershipStatuses" [value]="type">{{ type }}</option>
+                </select>
+              </label>
+              <label>
+                Encumbrance status
+                <select formControlName="encumbranceStatus">
+                  <option *ngFor="let type of encumbranceStatuses" [value]="type">{{ type }}</option>
+                </select>
+              </label>
+            </div>
+            <div class="row">
+              <label>
+                Remarks
+                <textarea rows="2" formControlName="remarks"></textarea>
+              </label>
+              <div class="inline-actions">
+                <button type="button" class="tiny danger" (click)="removeLandParcel(i)" [disabled]="landParcelsArray.length === 1">Remove</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" class="primary" (click)="createApplication()">Create draft application</button>
+      </form>
+    </article>
+
+    <article class="panel animated-panel" *ngIf="activeTab === 'search'">
+      <header class="panel__header">
+        <h2>Search and summary</h2>
+        <div class="chip">{{ visibleApplications.length }} visible</div>
+      </header>
+
+      <form class="form" [formGroup]="searchForm">
+        <div class="row">
+          <label>
+            District
+            <input type="text" formControlName="district" placeholder="Pune">
+          </label>
+          <label>
+            Taluka
+            <input type="text" formControlName="taluka" placeholder="Haveli">
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            Status
+            <select formControlName="status">
+              <option value="">Any</option>
+              <option *ngFor="let status of statuses" [value]="status">{{ status }}</option>
+            </select>
+          </label>
+          <label>
+            Minimum amount
+            <input type="number" formControlName="minAmount" min="1" step="1">
+          </label>
+        </div>
+        <div class="inline-actions">
+          <button type="button" class="secondary" (click)="applySearch()">Apply</button>
+          <button type="button" class="ghost" (click)="clearSearch()">Clear</button>
+        </div>
+      </form>
+
+      <div class="list">
+        <ng-container *ngIf="visibleApplications.length; else emptyApplications">
+          <article
+            class="list-card list-card--selectable"
+            *ngFor="let application of visibleApplications"
+            (click)="selectApplication(application)"
+          >
+            <strong>{{ application.applicationNumber }} · {{ application.primaryApplicantName }}</strong>
+            <span>{{ application.district }} · {{ application.taluka }} · ₹{{ formatAmount(application.requestedAmount) }}</span>
+            <small>{{ application.status }} · {{ application.eligibilitySummary }}</small>
+          </article>
+        </ng-container>
+        <ng-template #emptyApplications>
+          <article class="list-card empty-state">
+            <strong>No agri mortgage applications yet</strong>
+            <span>Create a draft application to start the workflow.</span>
+            <small>The list will populate after you submit the first record.</small>
+          </article>
+        </ng-template>
+      </div>
+    </article>
+
+    <article class="panel animated-panel" *ngIf="activeTab === 'operations'">
+      <header class="panel__header">
+        <h2>Selected application</h2>
+        <div class="chip" *ngIf="selectedApplication">#{{ selectedApplication.id }}</div>
+      </header>
+
+      <div class="selected" *ngIf="selectedApplication; else noSelection">
+        <div class="selected__header">
+          <div>
+            <strong>{{ selectedApplication.applicationNumber }}</strong>
+            <p>{{ selectedApplication.primaryApplicantName }}</p>
+          </div>
+          <span>{{ selectedApplication.status }}</span>
+        </div>
+
+        <div class="detail-grid">
+          <div>
+            <span>Requested amount</span>
+            <strong>₹{{ formatAmount(selectedApplication.requestedAmount) }}</strong>
+          </div>
+          <div>
+            <span>Total land value</span>
+            <strong>₹{{ formatAmount(selectedApplication.totalLandValue) }}</strong>
+          </div>
+          <div>
+            <span>Combined income</span>
+            <strong>₹{{ formatAmount(selectedApplication.combinedIncome) }}</strong>
+          </div>
+          <div>
+            <span>LTV ratio</span>
+            <strong>{{ (selectedApplication.ltvRatio * 100) | number:'1.0-2' }}%</strong>
+          </div>
+        </div>
+
+        <div class="result-box">
+          <strong [class.pass]="selectedApplication.eligible" [class.fail]="!selectedApplication.eligible">
+            {{ selectedApplication.eligible ? 'Eligible' : 'Not eligible' }}
+          </strong>
+          <p>{{ selectedApplication.eligibilitySummary }}</p>
+          <small>Eligibility score: {{ eligibilityScore(selectedApplication) }}</small>
+        </div>
+
+        <form class="form" [formGroup]="statusForm">
+          <div class="row">
+            <label>
+              Next status
+              <select formControlName="targetStatus">
+                <option *ngFor="let status of statusTransitions[selectedApplication.status]" [value]="status">{{ status }}</option>
+              </select>
+            </label>
+            <label>
+              Remarks
+              <input type="text" formControlName="remarks">
+            </label>
+          </div>
+          <button type="button" class="primary" (click)="advanceStatus()">Advance status</button>
+        </form>
+
+        <div class="history">
+          <h3>History</h3>
+          <article *ngFor="let item of selectedApplication.history">
+            <strong>{{ item.fromStatus || 'NONE' }} → {{ item.toStatus }}</strong>
+            <span>{{ item.remarks }}</span>
+            <small>{{ item.changedAt | date:'medium' }}</small>
+          </article>
+        </div>
+
+        <div class="subcard">
+          <h3>Land parcels</h3>
+          <div class="list list--tight">
+            <article class="list-card" *ngFor="let parcel of selectedApplication.landParcels">
+              <strong>{{ parcel.surveyNumber }} · {{ parcel.village }}</strong>
+              <span>{{ parcel.landType }} · ₹{{ formatAmount(parcel.marketValue) }}</span>
+              <small>{{ parcel.ownershipStatus }} · {{ parcel.encumbranceStatus }}</small>
+            </article>
+          </div>
+        </div>
+      </div>
+
+      <ng-template #noSelection>
+        <p>Select an application to see the eligibility and status workflow.</p>
+      </ng-template>
+    </article>
+  </section>
+  </main>
+</div>

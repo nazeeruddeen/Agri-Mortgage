@@ -77,6 +77,18 @@ public class AgriMortgageApplication {
     @Column(name = "eligibility_summary", length = 1000)
     private String eligibilitySummary;
 
+    /**
+     * JSON snapshot of the eligibility rules evaluated at submission time.
+     * Interview answer: "We snapshot the rules at submission so that if the LTV cap
+     * or income thresholds change mid-review, approval still evaluates the submitted rules
+     * — not the current config. This gives the borrower a deterministic outcome."
+     *
+     * Example: {"maxLtvRatio":0.65,"minCombinedIncome":50000,"maxEncumbranceTolerance":"NONE"}
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "eligibility_rules_snapshot", columnDefinition = "JSON")
+    private String eligibilityRulesSnapshot;
+
     @Column(name = "total_land_value", precision = 15, scale = 2)
     private BigDecimal totalLandValue;
 
