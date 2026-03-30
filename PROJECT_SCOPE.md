@@ -1,24 +1,27 @@
 # Agri Mortgage Loan System
 
-This workspace is the implementation folder for the resume project:
+Primary goal:
 
-- Agri Mortgage Loan System
+- deliver a domain-heavy agricultural mortgage platform with realistic workflow depth and live frontend/backend integration
 
-Starting point:
+Implemented scope:
 
-- Copied from `business-loan-management-system` to reuse authentication, CRUD, file-processing, and deployment foundations.
+- secured authentication and role-aware access
+- agricultural borrower onboarding
+- co-borrower capture
+- land parcel capture with appraisal inputs
+- land/legal document metadata and review workflow
+- persisted encumbrance verification with retry-aware gateway integration
+- encumbrance-aware eligibility evaluation
+- mortgage workflow state progression
+- paginated search
+- dashboard summary
+- operator KPI visibility for readiness and backlog
+- district summary reporting
+- Excel export
 
-Planned scope:
+Position in portfolio:
 
-- Agricultural borrower onboarding
-- Land parcel capture and verification
-- Ownership and encumbrance validation
-- Mortgage eligibility rules engine
-- Co-borrower support
-- Approval and state-tracking workflow
-- Reporting and searchable application APIs
-
-Notes:
-
-- Keep this folder independent from the original scaffold and the `business-loan-management-system` folder.
-- All project-specific refactoring should happen here.
+- this is the domain-heavy lending project
+- it complements the business lending monolith and the LACR reconciliation project
+- it is intended to demonstrate business-rule modeling, state transitions, retry-aware verification, and reportable mortgage operations rather than just CRUD

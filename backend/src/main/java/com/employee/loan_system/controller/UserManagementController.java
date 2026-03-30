@@ -13,7 +13,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/auth/users")
-@CrossOrigin(origins = {"http://localhost:4200", "http://localhost:4201", "http://localhost:4202"})
+@CrossOrigin(originPatterns = "http://localhost:*")
 @PreAuthorize("hasRole('ADMIN')")
 public class UserManagementController {
 

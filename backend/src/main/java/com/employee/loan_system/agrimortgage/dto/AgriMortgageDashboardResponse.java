@@ -10,6 +10,12 @@ import java.util.Map;
 public record AgriMortgageDashboardResponse(
         long totalApplications,
         long eligibleApplications,
+        long documentReadyApplications,
+        long applicationsPendingDocuments,
+        long clearEncumbranceApplications,
+        long encumberedApplications,
+        long pendingEncumbranceApplications,
+        long gatewayErrorApplications,
         long draftApplications,
         long landVerificationApplications,
         long encumbranceCheckApplications,

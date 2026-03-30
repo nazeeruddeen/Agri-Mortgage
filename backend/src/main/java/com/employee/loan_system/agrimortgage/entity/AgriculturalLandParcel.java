@@ -74,6 +74,15 @@ public class AgriculturalLandParcel {
     @Column(name = "remarks", length = 500)
     private String remarks;
 
+    @Column(name = "encumbrance_check_details", length = 500)
+    private String encumbranceCheckDetails;
+
+    @Column(name = "gateway_available")
+    private Boolean gatewayAvailable;
+
+    @Column(name = "encumbrance_checked_at")
+    private LocalDateTime encumbranceCheckedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

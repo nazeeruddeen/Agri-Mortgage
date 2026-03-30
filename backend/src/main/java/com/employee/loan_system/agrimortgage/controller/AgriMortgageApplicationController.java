@@ -3,8 +3,11 @@ package com.employee.loan_system.agrimortgage.controller;
 import com.employee.loan_system.agrimortgage.dto.AgriEligibilityResponse;
 import com.employee.loan_system.agrimortgage.dto.AgriMortgageApplicationResponse;
 import com.employee.loan_system.agrimortgage.dto.AgriMortgageDashboardResponse;
+import com.employee.loan_system.agrimortgage.dto.AgriMortgageDocumentResponse;
 import com.employee.loan_system.agrimortgage.dto.AdvanceAgriMortgageStatusRequest;
 import com.employee.loan_system.agrimortgage.dto.CreateAgriMortgageApplicationRequest;
+import com.employee.loan_system.agrimortgage.dto.CreateAgriMortgageDocumentRequest;
+import com.employee.loan_system.agrimortgage.dto.UpdateAgriMortgageDocumentStatusRequest;
 import com.employee.loan_system.agrimortgage.entity.AgriMortgageApplicationStatus;
 import com.employee.loan_system.agrimortgage.service.AgriMortgageApplicationService;
 import com.employee.loan_system.agrimortgage.service.AgriReportService;
@@ -22,6 +25,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -62,6 +66,39 @@ public class AgriMortgageApplicationController {
         return ResponseEntity.ok(applicationService.getApplication(applicationId));
     }
 
+    @Operation(summary = "List land/legal documents for an agri mortgage application")
+    @GetMapping("/{applicationId}/documents")
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','REVIEWER')")
+    public ResponseEntity<List<AgriMortgageDocumentResponse>> documents(@PathVariable Long applicationId) {
+        return ResponseEntity.ok(applicationService.documents(applicationId));
+    }
+
+    @Operation(summary = "Add document metadata to an agri mortgage application")
+    @PostMapping("/{applicationId}/documents")
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','REVIEWER')")
+    public ResponseEntity<AgriMortgageApplicationResponse> addDocument(
+            @PathVariable Long applicationId,
+            @Valid @RequestBody CreateAgriMortgageDocumentRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(applicationService.addDocument(applicationId, request));
+    }
+
+    @Operation(summary = "Update document verification status")
+    @PatchMapping("/{applicationId}/documents/{documentId}/status")
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','REVIEWER')")
+    public ResponseEntity<AgriMortgageApplicationResponse> updateDocumentStatus(
+            @PathVariable Long applicationId,
+            @PathVariable Long documentId,
+            @Valid @RequestBody UpdateAgriMortgageDocumentStatusRequest request) {
+        return ResponseEntity.ok(applicationService.updateDocumentStatus(applicationId, documentId, request));
+    }
+
+    @Operation(summary = "Run encumbrance verification across all land parcels using the retry wrapper")
+    @PostMapping("/{applicationId}/encumbrance-check")
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','REVIEWER')")
+    public ResponseEntity<AgriMortgageApplicationResponse> runEncumbranceCheck(@PathVariable Long applicationId) {
+        return ResponseEntity.ok(applicationService.runEncumbranceCheck(applicationId));
+    }
+
     @Operation(summary = "Run composite eligibility evaluation for an application")
     @PostMapping("/{applicationId}/evaluate")
     @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','REVIEWER')")
@@ -97,7 +134,7 @@ public class AgriMortgageApplicationController {
         return ResponseEntity.ok(applicationService.getDashboard());
     }
 
-    @Operation(summary = "Export all applications to Excel (.xlsx) — streams file download")
+    @Operation(summary = "Export all applications to Excel (.xlsx) - streams file download")
     @GetMapping(value = "/export", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','REVIEWER')")
     public ResponseEntity<byte[]> exportToExcel() throws IOException {

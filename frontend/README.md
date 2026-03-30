@@ -1,27 +1,35 @@
 # Agri Mortgage Frontend
 
-Angular dev-server shell for the Agri Mortgage Loan System workspace.
+Angular operator console for the Agri Mortgage Loan System backend.
 
-## Development server
+## Dev Server
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4400/`. The application will automatically reload if you change any of the source files.
+- Port: `4400`
+- API base URL: `http://localhost:8011/api/v1/agri-mortgage-applications`
 
-## Code scaffolding
+## Run
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+```bash
+npm install
+npm start
+```
 
-## Build
+## What the UI Covers
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+- JWT-backed sign-in against the Spring Boot backend
+- agri mortgage draft creation
+- co-borrower and land parcel capture
+- operator dashboard KPIs for document backlog and encumbrance readiness
+- paginated application search
+- land/legal document upload metadata and reviewer status changes
+- persisted encumbrance verification with parcel-level outcome visibility
+- eligibility evaluation
+- workflow status advancement
+- dashboard summary and district-level summary visibility
+- Excel export for the agri mortgage register
 
-## Running unit tests
+## Seeded Users
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
-
-## Running end-to-end tests
-
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
-
-## Further help
-
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+- `admin / Admin@123`
+- `officer / Officer@123`
+- `reviewer / Reviewer@123`

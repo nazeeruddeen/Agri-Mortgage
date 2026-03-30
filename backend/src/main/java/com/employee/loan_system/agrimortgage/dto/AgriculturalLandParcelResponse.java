@@ -6,6 +6,7 @@ import com.employee.loan_system.agrimortgage.entity.OwnershipStatus;
 import lombok.Builder;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Builder
 public record AgriculturalLandParcelResponse(
@@ -21,6 +22,9 @@ public record AgriculturalLandParcelResponse(
         OwnershipStatus ownershipStatus,
         EncumbranceStatus encumbranceStatus,
         String remarks,
-        BigDecimal appraisalValue
+        BigDecimal appraisalValue,
+        String encumbranceCheckDetails,
+        Boolean gatewayAvailable,
+        LocalDateTime encumbranceCheckedAt
 ) {
 }

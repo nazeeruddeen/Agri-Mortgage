@@ -77,6 +77,17 @@ public class AgriMortgageApplication {
     @Column(name = "eligibility_summary", length = 1000)
     private String eligibilitySummary;
 
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "encumbrance_verification_status", nullable = false, length = 30)
+    private EncumbranceVerificationStatus encumbranceVerificationStatus = EncumbranceVerificationStatus.NOT_RUN;
+
+    @Column(name = "encumbrance_verification_summary", length = 1000)
+    private String encumbranceVerificationSummary;
+
+    @Column(name = "encumbrance_verified_at")
+    private LocalDateTime encumbranceVerifiedAt;
+
     /**
      * JSON snapshot of the eligibility rules evaluated at submission time.
      * Interview answer: "We snapshot the rules at submission so that if the LTV cap
@@ -124,6 +135,9 @@ public class AgriMortgageApplication {
     @OneToMany(mappedBy = "application", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<AgriMortgageApplicationStateHistory> stateHistory = new ArrayList<>();
 
+    @OneToMany(mappedBy = "application", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<AgriMortgageDocument> documents = new ArrayList<>();
+
     public void addApplicant(AgriMortgageApplicant applicant) {
         applicant.setApplication(this);
         applicants.add(applicant);
@@ -137,5 +151,10 @@ public class AgriMortgageApplication {
     public void addStateHistory(AgriMortgageApplicationStateHistory history) {
         history.setApplication(this);
         stateHistory.add(history);
+    }
+
+    public void addDocument(AgriMortgageDocument document) {
+        document.setApplication(this);
+        documents.add(document);
     }
 }
