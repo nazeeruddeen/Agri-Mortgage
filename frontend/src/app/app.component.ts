@@ -4,6 +4,7 @@ import { Component, OnInit } from '@angular/core';
 import { AbstractControl, FormArray, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable, forkJoin, of } from 'rxjs';
 import { AgriMortgageApiService } from './agri-mortgage-api.service';
+import { environment } from '../environments/environment';
 import {
   AdvanceAgriMortgageStatusRequest,
   AgriDistrictSummary,
@@ -42,7 +43,7 @@ type AppTab = 'dashboard' | 'intake' | 'search' | 'operations';
 })
 export class AppComponent implements OnInit {
   readonly title = 'Agri Mortgage Loan System';
-  readonly apiBaseUrl = 'http://localhost:8011/api/v1/agri-mortgage-applications';
+  readonly apiBaseUrl = `${environment.apiBaseUrl}/agri-mortgage-applications`;
   readonly tabs: AppTab[] = ['dashboard', 'intake', 'search', 'operations'];
   readonly statuses: AgriMortgageApplicationStatus[] = [
     'DRAFT',
