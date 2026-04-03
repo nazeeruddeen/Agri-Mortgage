@@ -1,10 +1,12 @@
 package com.employee.loan_system.agrimortgage.dto;
 
 import com.employee.loan_system.agrimortgage.entity.AgriMortgageApplicationStatus;
+import com.employee.loan_system.agrimortgage.entity.AgriMortgageLoanAccountStatus;
 import com.employee.loan_system.agrimortgage.entity.EncumbranceVerificationStatus;
 import lombok.Builder;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -34,6 +36,10 @@ public record AgriMortgageApplicationResponse(
         LocalDateTime submittedAt,
         LocalDateTime sanctionedAt,
         LocalDateTime disbursedAt,
+        String loanAccountNumber,
+        AgriMortgageLoanAccountStatus loanAccountStatus,
+        BigDecimal outstandingPrincipal,
+        LocalDate nextDueDate,
         AgriMortgageDocumentSummaryResponse documentSummary,
         List<AgriMortgageDocumentResponse> documents,
         List<AgriMortgageApplicantResponse> applicants,

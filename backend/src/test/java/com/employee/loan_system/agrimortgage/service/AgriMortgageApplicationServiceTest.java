@@ -50,9 +50,12 @@ class AgriMortgageApplicationServiceTest {
     @Mock
     private EncumbranceGatewayRetryWrapper encumbranceGatewayRetryWrapper;
 
+    @Mock
+    private AgriMortgageServicingService servicingService;
+
     @Test
     void createDraftShouldStoreApplicantsAndLand() {
-        AgriMortgageApplicationService service = new AgriMortgageApplicationService(applicationRepository, documentRepository, new AgriEligibilityService(), encumbranceGatewayRetryWrapper);
+        AgriMortgageApplicationService service = service();
         when(applicationRepository.save(any(AgriMortgageApplication.class))).thenAnswer(invocation -> {
             AgriMortgageApplication application = invocation.getArgument(0);
             application.setId(1L);
@@ -71,7 +74,7 @@ class AgriMortgageApplicationServiceTest {
 
     @Test
     void addDocumentShouldUpdateDocumentSummary() {
-        AgriMortgageApplicationService service = new AgriMortgageApplicationService(applicationRepository, documentRepository, new AgriEligibilityService(), encumbranceGatewayRetryWrapper);
+        AgriMortgageApplicationService service = service();
         AgriMortgageApplication application = buildApplication();
         when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
         when(applicationRepository.save(any(AgriMortgageApplication.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -96,7 +99,7 @@ class AgriMortgageApplicationServiceTest {
 
     @Test
     void runEncumbranceCheckShouldPersistGatewayOutcome() {
-        AgriMortgageApplicationService service = new AgriMortgageApplicationService(applicationRepository, documentRepository, new AgriEligibilityService(), encumbranceGatewayRetryWrapper);
+        AgriMortgageApplicationService service = service();
         AgriMortgageApplication application = buildApplication();
         when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
         when(applicationRepository.save(any(AgriMortgageApplication.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -112,7 +115,7 @@ class AgriMortgageApplicationServiceTest {
 
     @Test
     void evaluateShouldFailWhenLandIsEncumbered() {
-        AgriMortgageApplicationService service = new AgriMortgageApplicationService(applicationRepository, documentRepository, new AgriEligibilityService(), encumbranceGatewayRetryWrapper);
+        AgriMortgageApplicationService service = service();
         AgriMortgageApplication application = buildApplication();
         when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
         when(applicationRepository.save(any(AgriMortgageApplication.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -125,7 +128,7 @@ class AgriMortgageApplicationServiceTest {
 
     @Test
     void advanceStatusShouldRejectInvalidTransition() {
-        AgriMortgageApplicationService service = new AgriMortgageApplicationService(applicationRepository, documentRepository, new AgriEligibilityService(), encumbranceGatewayRetryWrapper);
+        AgriMortgageApplicationService service = service();
         AgriMortgageApplication application = buildApplication();
         application.setStatus(AgriMortgageApplicationStatus.DRAFT);
         when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
@@ -141,7 +144,7 @@ class AgriMortgageApplicationServiceTest {
 
     @Test
     void dashboardShouldAggregateCountsAndAmounts() {
-        AgriMortgageApplicationService service = new AgriMortgageApplicationService(applicationRepository, documentRepository, new AgriEligibilityService(), encumbranceGatewayRetryWrapper);
+        AgriMortgageApplicationService service = service();
         AgriMortgageApplication draft = buildApplication();
         draft.setStatus(AgriMortgageApplicationStatus.DRAFT);
         draft.setEncumbranceVerificationStatus(EncumbranceVerificationStatus.ENCUMBERED);
@@ -219,6 +222,7 @@ class AgriMortgageApplicationServiceTest {
     private AgriMortgageApplication buildApplication() {
         AgriMortgageApplication application = new AgriMortgageApplication();
         application.setId(1L);
+        application.setStatus(AgriMortgageApplicationStatus.DRAFT);
         application.setApplicationNumber("AGRI-TEST");
         application.setPrimaryApplicantName("Ramesh Patil");
         application.setPrimaryApplicantAadhaar("123412341234");
@@ -268,5 +272,14 @@ class AgriMortgageApplicationServiceTest {
         document.setFileReference("docs/" + type.name().toLowerCase() + ".pdf");
         document.setUploadedBy("reviewer");
         return document;
+    }
+
+    private AgriMortgageApplicationService service() {
+        return new AgriMortgageApplicationService(
+                applicationRepository,
+                documentRepository,
+                new AgriEligibilityService(),
+                encumbranceGatewayRetryWrapper,
+                servicingService);
     }
 }

@@ -4,12 +4,14 @@ services:
     container_name: agri-mortgage-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: ${AGRI_MORTGAGE_MYSQL_ROOT_PASSWORD:?set AGRI_MORTGAGE_MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: agri_mortgage_loan_system
+      MYSQL_USER: agri_mortgage_app
+      MYSQL_PASSWORD: ${AGRI_MORTGAGE_DB_PASSWORD:?set AGRI_MORTGAGE_DB_PASSWORD}
     ports:
       - "3306:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -24,13 +26,20 @@ services:
       mysql:
         condition: service_healthy
     environment:
+      SPRING_PROFILES_ACTIVE: local
       SERVER_PORT: 8011
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/agri_mortgage_loan_system?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
-      APP_SECURITY_JWT_SECRET: QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVo0NTY3ODkwQUJDREVGR0hJSktMTU5PUFFSU1RVVg==
+      SPRING_DATASOURCE_USERNAME: agri_mortgage_app
+      SPRING_DATASOURCE_PASSWORD: ${AGRI_MORTGAGE_DB_PASSWORD:?set AGRI_MORTGAGE_DB_PASSWORD}
+      APP_SECURITY_JWT_SECRET: ${AGRI_MORTGAGE_JWT_SECRET:?set AGRI_MORTGAGE_JWT_SECRET}
       APP_SECURITY_JWT_ACCESS_TOKEN_EXPIRATION_MS: 900000
       APP_SECURITY_JWT_REFRESH_TOKEN_EXPIRATION_MS: 604800000
+      APP_SECURITY_ALLOWED_ORIGIN_PATTERNS: http://localhost:4400
+      APP_SECURITY_BOOTSTRAP_USERS_ENABLED: "true"
+      APP_SECURITY_BOOTSTRAP_ADMIN_PASSWORD: ${AGRI_MORTGAGE_ADMIN_PASSWORD:?set AGRI_MORTGAGE_ADMIN_PASSWORD}
+      APP_SECURITY_BOOTSTRAP_OFFICER_PASSWORD: ${AGRI_MORTGAGE_OFFICER_PASSWORD:?set AGRI_MORTGAGE_OFFICER_PASSWORD}
+      APP_SECURITY_BOOTSTRAP_REVIEWER_PASSWORD: ${AGRI_MORTGAGE_REVIEWER_PASSWORD:?set AGRI_MORTGAGE_REVIEWER_PASSWORD}
+      APP_SECURITY_BOOTSTRAP_BORROWER_PASSWORD: ${AGRI_MORTGAGE_BORROWER_PASSWORD:?set AGRI_MORTGAGE_BORROWER_PASSWORD}
       SPRING_JPA_SHOW_SQL: "false"
     ports:
       - "8011:8011"

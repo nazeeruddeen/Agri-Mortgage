@@ -5,9 +5,10 @@ metadata:
   namespace: agri-mortgage
 data:
   SERVER_PORT: "8011"
-  SPRING_DATASOURCE_URL: jdbc:mysql://agri-mortgage-mysql:3306/agri_mortgage_loan_system?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+  SPRING_PROFILES_ACTIVE: prod
   SPRING_JPA_SHOW_SQL: "false"
   SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: 50MB
   SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: 50MB
   APP_SECURITY_JWT_ACCESS_TOKEN_EXPIRATION_MS: "900000"
   APP_SECURITY_JWT_REFRESH_TOKEN_EXPIRATION_MS: "604800000"
+  APP_SECURITY_ALLOWED_ORIGIN_PATTERNS: https://mortgage-ops.example.com

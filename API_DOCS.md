@@ -33,6 +33,12 @@ Roles used by the project:
 | `POST` | `/{applicationId}/status` | Advance the workflow status |
 | `GET` | `/` | Search applications with filters and pagination |
 | `GET` | `/summary` | Fetch dashboard-level aggregate metrics |
+| `GET` | `/reports/district-summary` | Fetch database-aggregated district reporting data |
+| `GET` | `/export` | Download the Excel application register |
+
+## Concurrency
+
+The mortgage workflow uses optimistic locking on application, land parcel, document, and applicant rows. If two operators update the same record concurrently, the backend returns `409 Conflict`. Reload the latest application state before retrying the action. The operator console surfaces this as an explicit conflict notice instead of a generic failure.
 
 ## Create Draft
 
@@ -85,6 +91,8 @@ Runs encumbrance verification through the retry-aware gateway wrapper and persis
 - parcel-level gateway availability
 - parcel-level encumbrance check details
 - verification timestamps
+
+If the external registry keeps failing after retries, the response is returned with `encumbranceVerificationStatus = GATEWAY_ERROR`. That is a retryable fallback state, not a final decision. The operator console highlights it so the reviewer knows to retry once the dependency recovers.
 
 ## Evaluate
 
@@ -145,6 +153,12 @@ Returns:
 - total land parcels
 - total appraised value
 
+## District Summary
+
+`GET /api/v1/agri-mortgage-applications/reports/district-summary`
+
+Returns district-level reporting rows computed in the database using `GROUP BY district` rather than by loading every application into memory. The query is backed by the district index created in the schema migration, so the reporting path stays practical for large case volumes.
+
 ## Response Shape
 
 The main application response includes:
@@ -159,3 +173,11 @@ The main application response includes:
 - document completeness summary
 - state history
 - eligibility summary and computed ratios
+
+Document readiness is part of the workflow contract: required document completeness is visible in the dashboard summary and on the selected-application panel, so sanction blockers are obvious before an operator attempts the transition.
+
+Operational note:
+
+- correlation IDs and structured logs should be used together when investigating retryable encumbrance fallback or `409 Conflict` updates
+- the production runbook in `RUNBOOK.md` captures the recovery path for stale encumbrance states, blocked document readiness, and concurrent operator updates
+- production Kubernetes deployments expect datasource credentials, JWT secrets, and connection settings to arrive through External Secrets rather than committed manifest values

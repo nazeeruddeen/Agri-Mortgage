@@ -525,6 +525,57 @@ input:focus, select:focus, textarea:focus {
   gap: 10px;
 }
 
+.workflow-alert {
+  border-radius: 16px;
+  padding: 16px 18px;
+  margin: 16px 0 18px;
+  border: 1px solid transparent;
+}
+
+.workflow-alert strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 1rem;
+}
+
+.workflow-alert p {
+  margin: 0 0 6px;
+  line-height: 1.55;
+}
+
+.workflow-alert small {
+  display: block;
+  color: inherit;
+  opacity: 0.9;
+}
+
+.workflow-alert--warning {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.28);
+  color: #fde68a;
+}
+
+.workflow-alert--info {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.26);
+  color: #bfdbfe;
+}
+
+.action-hint {
+  display: block;
+  margin-top: -6px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.action-hint[data-tone='warning'] {
+  color: #fde68a;
+}
+
+.action-hint[data-tone='success'] {
+  color: #a7f3d0;
+}
+
 @media (max-width: 1024px) {
   .hero, .row, .split-grid { grid-template-columns: 1fr; }
   .hero__metrics, .dashboard-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }

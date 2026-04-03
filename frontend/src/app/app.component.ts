@@ -25,6 +25,7 @@ import {
   LoginRequest,
   OwnershipStatus,
   EncumbranceStatus,
+  EncumbranceVerificationStatus,
   RelationshipType,
   UpdateAgriMortgageDocumentStatusRequest,
   UserInfoResponse
@@ -85,8 +86,8 @@ export class AppComponent implements OnInit {
   reportPage = 0;
 
   authForm = this.fb.group<any>({
-    username: ['admin', [Validators.required]],
-    password: ['Admin@123', [Validators.required]]
+    username: ['', [Validators.required]],
+    password: ['', [Validators.required]]
   });
 
   applicationForm = this.fb.group<any>({
@@ -329,6 +330,20 @@ export class AppComponent implements OnInit {
       (application) => {
         this.upsertApplication(application);
         this.patchStatusForm(application);
+        if (application.encumbranceVerificationStatus === 'GATEWAY_ERROR') {
+          this.notice = {
+            kind: 'warning',
+            text: `Encumbrance verification fell back after retries. ${application.encumbranceVerificationSummary}. Retry when the external registry is healthy.`
+          };
+          return;
+        }
+        if (application.encumbranceVerificationStatus === 'PENDING_VERIFICATION') {
+          this.notice = {
+            kind: 'warning',
+            text: `Encumbrance verification is still pending confirmation. ${application.encumbranceVerificationSummary}.`
+          };
+          return;
+        }
         this.notice = { kind: 'success', text: `Encumbrance verification completed: ${application.encumbranceVerificationSummary}` };
       },
       'Unable to run encumbrance verification'
@@ -469,8 +484,11 @@ export class AppComponent implements OnInit {
   }
 
   badgeTone(status: string): string {
-    if (status === 'REJECTED' || status === 'ENCUMBERED' || status === 'GATEWAY_ERROR') {
+    if (status === 'REJECTED' || status === 'ENCUMBERED') {
       return 'danger';
+    }
+    if (status === 'GATEWAY_ERROR' || status === 'PENDING_VERIFICATION' || status === 'NOT_RUN') {
+      return 'warning';
     }
     if (status === 'VERIFIED' || status === 'CLEAR' || status === 'SANCTIONED' || status === 'DISBURSED') {
       return 'success';
@@ -483,7 +501,49 @@ export class AppComponent implements OnInit {
   }
 
   documentReadinessLabel(application: AgriMortgageApplicationResponse): string {
-    return application.documentSummary.documentsComplete ? 'Documents ready' : 'Documents pending';
+    if (application.documentSummary.documentsComplete) {
+      return 'Documents ready';
+    }
+    return `Documents pending (${application.documentSummary.missingRequiredDocuments.length} missing)`;
+  }
+
+  encumbranceStatusLabel(status: EncumbranceVerificationStatus): string {
+    switch (status) {
+      case 'NOT_RUN':
+        return 'Not run';
+      case 'CLEAR':
+        return 'Encumbrance clear';
+      case 'ENCUMBERED':
+        return 'Encumbered';
+      case 'PENDING_VERIFICATION':
+        return 'Pending confirmation';
+      case 'GATEWAY_ERROR':
+        return 'Gateway fallback';
+    }
+  }
+
+  encumbranceRetryLabel(application: AgriMortgageApplicationResponse): string {
+    switch (application.encumbranceVerificationStatus) {
+      case 'GATEWAY_ERROR':
+        return 'Retry available after gateway recovery';
+      case 'PENDING_VERIFICATION':
+        return 'Waiting for external confirmation';
+      case 'NOT_RUN':
+        return 'Not run yet';
+      default:
+        return 'No retry needed';
+    }
+  }
+
+  encumbranceRetryTone(application: AgriMortgageApplicationResponse): string {
+    switch (application.encumbranceVerificationStatus) {
+      case 'GATEWAY_ERROR':
+      case 'PENDING_VERIFICATION':
+      case 'NOT_RUN':
+        return 'warning';
+      default:
+        return 'success';
+    }
   }
 
   private restoreSession(): void {
@@ -631,6 +691,20 @@ export class AppComponent implements OnInit {
     const detail = typeof apiError === 'string'
       ? apiError
       : apiError?.message || httpError?.message || fallbackText;
+    if (httpError?.status === 409) {
+      this.notice = {
+        kind: 'warning',
+        text: `Concurrent update detected (409 Conflict). ${detail} Reload the selected application and retry the operator action.`
+      };
+      return;
+    }
+    if (httpError?.status === 503 || httpError?.status === 504) {
+      this.notice = {
+        kind: 'warning',
+        text: `${fallbackText}. ${detail} The external registry is still recovering; retry once the dependency is healthy.`
+      };
+      return;
+    }
     this.notice = { kind: 'danger', text: `${fallbackText}. ${detail}` };
   }
 

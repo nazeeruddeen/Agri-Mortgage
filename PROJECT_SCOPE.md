@@ -19,9 +19,14 @@ Implemented scope:
 - operator KPI visibility for readiness and backlog
 - district summary reporting
 - Excel export
+- optimistic locking for concurrent document, parcel, applicant, and workflow updates
+- operator-visible retryable encumbrance fallback and explicit `409 Conflict` handling for concurrent updates
+- database-backed district aggregation for reporting performance
+- production runbook and recovery notes in `RUNBOOK.md`
+- production secret-manager-backed configuration and local-profile-gated bootstrap users
 
-Position in portfolio:
+Position in production suite:
 
 - this is the domain-heavy lending project
 - it complements the business lending monolith and the LACR reconciliation project
-- it is intended to demonstrate business-rule modeling, state transitions, retry-aware verification, and reportable mortgage operations rather than just CRUD
+- it is intended to demonstrate business-rule modeling, state transitions, retry-aware verification, conflict-safe updates, and reportable mortgage operations rather than just CRUD

@@ -7,19 +7,19 @@
       <form class="form" [formGroup]="authForm">
         <label>
           Username
-          <input type="text" formControlName="username" placeholder="admin">
+          <input type="text" formControlName="username" placeholder="operator username">
         </label>
         <label>
           Password
-          <input type="password" formControlName="password" placeholder="Admin@123">
+          <input type="password" formControlName="password" placeholder="provisioned password">
         </label>
         <button type="button" class="primary" (click)="login()" [disabled]="actionBusy === 'login' || bootstrapping">
           {{ actionBusy === 'login' ? 'Signing in...' : 'Sign in' }}
         </button>
       </form>
       <div class="seeded-users">
-        <span>Seeded users:</span>
-        <small>admin / Admin&#64;123, officer / Officer&#64;123, reviewer / Reviewer&#64;123</small>
+        <span>Operator access:</span>
+        <small>Local bootstrap users are available only when the `local` profile is enabled and credentials are supplied through environment variables.</small>
       </div>
       <div class="status" [attr.data-kind]="notice.kind">{{ notice.text }}</div>
     </section>
@@ -130,6 +130,11 @@
               <span>Encumbered cases</span>
               <strong>{{ summary.encumberedApplications }}</strong>
               <small>Applications currently blocked by encumbrance findings.</small>
+            </article>
+            <article class="kpi-card">
+              <span>Retryable fallback</span>
+              <strong>{{ summary.gatewayErrorApplications }}</strong>
+              <small>Encumbrance checks that fell back after external retries.</small>
             </article>
           </div>
           <div class="list" *ngIf="districtSummary.length; else noDistrictSummary">
@@ -426,13 +431,25 @@
                 </div>
                 <div>
                   <span>Encumbrance verification</span>
-                  <strong>{{ formatLabel(selectedApplication.encumbranceVerificationStatus) }}</strong>
+                  <strong>{{ encumbranceStatusLabel(selectedApplication.encumbranceVerificationStatus) }}</strong>
                 </div>
                 <div>
                   <span>Document readiness</span>
-                  <strong>{{ selectedApplication.documentSummary.documentsComplete ? 'Ready' : 'Pending' }}</strong>
+                  <strong>{{ documentReadinessLabel(selectedApplication) }}</strong>
                 </div>
               </div>
+            </div>
+
+            <div class="workflow-alert workflow-alert--warning" *ngIf="selectedApplication.encumbranceVerificationStatus === 'GATEWAY_ERROR'">
+              <strong>Retryable encumbrance fallback</strong>
+              <p>{{ selectedApplication.encumbranceVerificationSummary || 'External registry checks exhausted the retry wrapper and returned a fallback result.' }}</p>
+              <small>{{ encumbranceRetryLabel(selectedApplication) }}</small>
+            </div>
+
+            <div class="workflow-alert workflow-alert--info" *ngIf="!selectedApplication.documentSummary.documentsComplete">
+              <strong>Documents block sanction</strong>
+              <p>Missing required documents: {{ selectedApplication.documentSummary.missingRequiredDocuments.join(', ') }}</p>
+              <small>Sanction is intentionally blocked until every required document is verified.</small>
             </div>
 
             <div class="split-grid">
@@ -454,8 +471,15 @@
                   {{ actionBusy === 'evaluate' ? 'Evaluating...' : 'Run eligibility evaluation' }}
                 </button>
                 <button type="button" class="secondary" (click)="runEncumbranceCheck()" [disabled]="actionBusy === 'encumbranceCheck'">
-                  {{ actionBusy === 'encumbranceCheck' ? 'Checking...' : 'Run encumbrance verification' }}
+                  {{ actionBusy === 'encumbranceCheck'
+                    ? 'Checking...'
+                    : (selectedApplication.encumbranceVerificationStatus === 'GATEWAY_ERROR'
+                        ? 'Retry encumbrance verification'
+                        : 'Run encumbrance verification') }}
                 </button>
+                <small class="action-hint" [attr.data-tone]="encumbranceRetryTone(selectedApplication)">
+                  {{ encumbranceRetryLabel(selectedApplication) }}
+                </small>
               </div>
 
               <form class="form" [formGroup]="statusForm">
@@ -479,7 +503,7 @@
               <h3>Encumbrance result</h3>
               <div class="result-box">
                 <strong [class.pass]="selectedApplication.encumbranceVerificationStatus === 'CLEAR'" [class.fail]="selectedApplication.encumbranceVerificationStatus !== 'CLEAR'">
-                  {{ formatLabel(selectedApplication.encumbranceVerificationStatus) }}
+                  {{ encumbranceStatusLabel(selectedApplication.encumbranceVerificationStatus) }}
                 </strong>
                 <p>{{ selectedApplication.encumbranceVerificationSummary || 'Verification has not been executed yet.' }}</p>
                 <small *ngIf="selectedApplication.encumbranceVerifiedAt">Checked at {{ selectedApplication.encumbranceVerifiedAt | date:'medium' }}</small>
@@ -490,7 +514,7 @@
               <h3>Land and legal documents</h3>
               <div class="result-box">
                 <strong [class.pass]="selectedApplication.documentSummary.documentsComplete" [class.fail]="!selectedApplication.documentSummary.documentsComplete">
-                  {{ selectedApplication.documentSummary.documentsComplete ? 'Documents complete' : 'Documents pending' }}
+                  {{ documentReadinessLabel(selectedApplication) }}
                 </strong>
                 <p>
                   Verified {{ selectedApplication.documentSummary.verifiedDocuments }} of {{ selectedApplication.documentSummary.totalDocuments }} uploaded documents.

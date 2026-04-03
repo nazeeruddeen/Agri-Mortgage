@@ -1,15 +1,18 @@
 package com.employee.loan_system.agrimortgage.controller;
 
 import com.employee.loan_system.agrimortgage.dto.AgriEligibilityResponse;
+import com.employee.loan_system.agrimortgage.dto.AgriMortgageLoanAccountResponse;
 import com.employee.loan_system.agrimortgage.dto.AgriMortgageApplicationResponse;
 import com.employee.loan_system.agrimortgage.dto.AgriMortgageDashboardResponse;
 import com.employee.loan_system.agrimortgage.dto.AgriMortgageDocumentResponse;
+import com.employee.loan_system.agrimortgage.dto.RecordAgriRepaymentRequest;
 import com.employee.loan_system.agrimortgage.dto.AdvanceAgriMortgageStatusRequest;
 import com.employee.loan_system.agrimortgage.dto.CreateAgriMortgageApplicationRequest;
 import com.employee.loan_system.agrimortgage.dto.CreateAgriMortgageDocumentRequest;
 import com.employee.loan_system.agrimortgage.dto.UpdateAgriMortgageDocumentStatusRequest;
 import com.employee.loan_system.agrimortgage.entity.AgriMortgageApplicationStatus;
 import com.employee.loan_system.agrimortgage.service.AgriMortgageApplicationService;
+import com.employee.loan_system.agrimortgage.service.AgriMortgageServicingService;
 import com.employee.loan_system.agrimortgage.service.AgriReportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -43,12 +46,15 @@ import java.util.List;
 public class AgriMortgageApplicationController {
 
     private final AgriMortgageApplicationService applicationService;
+    private final AgriMortgageServicingService servicingService;
     private final AgriReportService reportService;
 
     public AgriMortgageApplicationController(
             AgriMortgageApplicationService applicationService,
+            AgriMortgageServicingService servicingService,
             AgriReportService reportService) {
         this.applicationService = applicationService;
+        this.servicingService = servicingService;
         this.reportService = reportService;
     }
 
@@ -125,6 +131,30 @@ public class AgriMortgageApplicationController {
             @Parameter(description = "Filter by minimum requested amount") @RequestParam(required = false) BigDecimal minAmount,
             @PageableDefault(size = 20) Pageable pageable) {
         return ResponseEntity.ok(applicationService.search(district, taluka, status, minAmount, pageable));
+    }
+
+    @Operation(summary = "Get the servicing account for a disbursed mortgage application")
+    @GetMapping("/{applicationId}/loan-account")
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','REVIEWER')")
+    public ResponseEntity<AgriMortgageLoanAccountResponse> loanAccount(@PathVariable Long applicationId) {
+        return ResponseEntity.ok(servicingService.getByApplicationId(applicationId));
+    }
+
+    @Operation(summary = "List disbursed mortgage servicing accounts with pagination")
+    @GetMapping("/loan-accounts")
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','REVIEWER')")
+    public ResponseEntity<Page<AgriMortgageLoanAccountResponse>> loanAccounts(
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(servicingService.listAccounts(pageable));
+    }
+
+    @Operation(summary = "Record a mortgage repayment against a servicing account")
+    @PostMapping("/loan-accounts/{accountId}/repayments")
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER')")
+    public ResponseEntity<com.employee.loan_system.agrimortgage.dto.AgriRepaymentTransactionResponse> recordRepayment(
+            @PathVariable Long accountId,
+            @Valid @RequestBody RecordAgriRepaymentRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(servicingService.recordRepayment(accountId, request));
     }
 
     @Operation(summary = "Get application volume/status dashboard summary")

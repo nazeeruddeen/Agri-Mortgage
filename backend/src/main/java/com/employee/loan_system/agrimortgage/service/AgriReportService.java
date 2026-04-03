@@ -2,7 +2,15 @@ package com.employee.loan_system.agrimortgage.service;
 
 import com.employee.loan_system.agrimortgage.entity.AgriMortgageApplication;
 import com.employee.loan_system.agrimortgage.repository.AgriMortgageApplicationRepository;
-import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.DataFormat;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,18 +19,19 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Service for generating Excel reports for Agri Mortgage Applications.
  *
  * Interview story:
  * "I used Apache POI rather than streaming CSV because the operations team needed
- *  formatted Excel output with bold headers and number formatting — not flat CSV.
- *  The method returns byte[] to keep the service layer independent of HTTP concerns;
- *  the controller handles Content-Disposition and streaming."
+ * formatted Excel output with bold headers and number formatting, not flat CSV.
+ * The method returns byte[] to keep the service layer independent of HTTP concerns;
+ * the controller handles Content-Disposition and streaming.
+ *
+ * For reporting, district summary aggregation now stays in SQL so the report path
+ * does not pull every application into memory just to group by district."
  */
 @Service
 public class AgriReportService {
@@ -41,10 +50,9 @@ public class AgriReportService {
     @Transactional(readOnly = true)
     public byte[] exportApplicationsToExcel() throws IOException {
         List<AgriMortgageApplication> applications = applicationRepository.findAll();
-        try (XSSFWorkbook workbook = new XSSFWorkbook()) {
+        try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Agri Mortgage Applications");
 
-            // Header style: bold font
             CellStyle headerStyle = workbook.createCellStyle();
             Font headerFont = workbook.createFont();
             headerFont.setBold(true);
@@ -52,16 +60,14 @@ public class AgriReportService {
             headerStyle.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
             headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 
-            // Currency format
             CellStyle currencyStyle = workbook.createCellStyle();
             DataFormat format = workbook.createDataFormat();
             currencyStyle.setDataFormat(format.getFormat("#,##0.00"));
 
-            // Header row
             String[] headers = {
-                "Application No", "Primary Applicant", "District", "Taluka", "Village",
-                "Status", "Requested Amount", "LTV Ratio (%)", "Eligible",
-                "Total Land Value", "Combined Income", "Submitted At"
+                    "Application No", "Primary Applicant", "District", "Taluka", "Village",
+                    "Status", "Requested Amount", "LTV Ratio (%)", "Eligible",
+                    "Total Land Value", "Combined Income", "Submitted At"
             };
             Row headerRow = sheet.createRow(0);
             for (int i = 0; i < headers.length; i++) {
@@ -71,7 +77,6 @@ public class AgriReportService {
                 sheet.setColumnWidth(i, 5000);
             }
 
-            // Data rows
             int rowIndex = 1;
             for (AgriMortgageApplication app : applications) {
                 Row row = sheet.createRow(rowIndex++);
@@ -87,7 +92,7 @@ public class AgriReportService {
                 amtCell.setCellStyle(currencyStyle);
 
                 row.createCell(7).setCellValue(
-                    app.getLtvRatio() != null ? app.getLtvRatio().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP).doubleValue() : 0
+                        app.getLtvRatio() != null ? app.getLtvRatio().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP).doubleValue() : 0
                 );
                 row.createCell(8).setCellValue(app.isEligible() ? "YES" : "NO");
 
@@ -113,28 +118,15 @@ public class AgriReportService {
      *
      * Interview story:
      * "Rather than pulling all records and computing in memory, this aggregation uses
-     *  the repository query to GROUP BY district. For reporting endpoints, I keep aggregation
-     *  in the DB when the data set is large — Java streams for small sets, SQL for large ones."
+     * a GROUP BY query on the applications table. That keeps the report path linear in the
+     * number of districts instead of the total number of mortgage cases."
      */
     @Transactional(readOnly = true)
     public List<DistrictSummary> getDistrictSummary() {
-        List<AgriMortgageApplication> applications = applicationRepository.findAll();
-
-        // Group by district
-        Map<String, DistrictAccumulator> accumulators = new HashMap<>();
-        for (AgriMortgageApplication app : applications) {
-            String district = app.getDistrict();
-            accumulators.computeIfAbsent(district, k -> new DistrictAccumulator(district))
-                    .add(app);
-        }
-
-        return accumulators.values().stream()
-                .map(DistrictAccumulator::toSummary)
-                .sorted((a, b) -> a.district().compareTo(b.district()))
+        return applicationRepository.findDistrictSummaryRows().stream()
+                .map(this::toSummary)
                 .toList();
     }
-
-    // --- Inner types ---
 
     public record DistrictSummary(
             String district,
@@ -142,43 +134,38 @@ public class AgriReportService {
             long sanctionedApplications,
             BigDecimal totalSanctionedAmount,
             BigDecimal averageLtvRatio
-    ) {}
+    ) {
+    }
 
-    private static class DistrictAccumulator {
-        final String district;
-        long totalApps = 0;
-        long sanctioned = 0;
-        BigDecimal totalSanctionedAmount = BigDecimal.ZERO;
-        BigDecimal ltvSum = BigDecimal.ZERO;
-        long ltvCount = 0;
+    private DistrictSummary toSummary(Object[] row) {
+        String district = row[0] == null ? "UNKNOWN" : row[0].toString();
+        long totalApplications = toLong(row[1]);
+        long sanctionedApplications = toLong(row[2]);
+        BigDecimal totalSanctionedAmount = toBigDecimal(row[3]).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal averageLtvRatio = toBigDecimal(row[4]).setScale(4, RoundingMode.HALF_UP);
+        return new DistrictSummary(district, totalApplications, sanctionedApplications, totalSanctionedAmount, averageLtvRatio);
+    }
 
-        DistrictAccumulator(String district) {
-            this.district = district;
+    private long toLong(Object value) {
+        if (value == null) {
+            return 0L;
         }
-
-        void add(AgriMortgageApplication app) {
-            totalApps++;
-            var status = app.getStatus();
-            if (status == com.employee.loan_system.agrimortgage.entity.AgriMortgageApplicationStatus.SANCTIONED
-                    || status == com.employee.loan_system.agrimortgage.entity.AgriMortgageApplicationStatus.DISBURSED
-                    || status == com.employee.loan_system.agrimortgage.entity.AgriMortgageApplicationStatus.CLOSED) {
-                sanctioned++;
-                if (app.getRequestedAmount() != null) {
-                    totalSanctionedAmount = totalSanctionedAmount.add(app.getRequestedAmount());
-                }
-            }
-            if (app.getLtvRatio() != null) {
-                ltvSum = ltvSum.add(app.getLtvRatio());
-                ltvCount++;
-            }
+        if (value instanceof Number number) {
+            return number.longValue();
         }
+        return Long.parseLong(value.toString());
+    }
 
-        DistrictSummary toSummary() {
-            BigDecimal avgLtv = ltvCount > 0
-                    ? ltvSum.divide(BigDecimal.valueOf(ltvCount), 4, RoundingMode.HALF_UP)
-                    : BigDecimal.ZERO;
-            return new DistrictSummary(district, totalApps, sanctioned,
-                    totalSanctionedAmount.setScale(2, RoundingMode.HALF_UP), avgLtv);
+    private BigDecimal toBigDecimal(Object value) {
+        if (value == null) {
+            return BigDecimal.ZERO;
         }
+        if (value instanceof BigDecimal bigDecimal) {
+            return bigDecimal;
+        }
+        if (value instanceof Number number) {
+            return BigDecimal.valueOf(number.doubleValue());
+        }
+        return new BigDecimal(value.toString());
     }
 }

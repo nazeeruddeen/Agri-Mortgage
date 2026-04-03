@@ -19,6 +19,7 @@ import com.employee.loan_system.agrimortgage.entity.AgriMortgageApplicant;
 import com.employee.loan_system.agrimortgage.entity.AgriMortgageDocument;
 import com.employee.loan_system.agrimortgage.entity.AgriMortgageDocumentStatus;
 import com.employee.loan_system.agrimortgage.entity.AgriMortgageDocumentType;
+import com.employee.loan_system.agrimortgage.entity.AgriMortgageLoanAccount;
 import com.employee.loan_system.agrimortgage.entity.AgriculturalLandParcel;
 import com.employee.loan_system.agrimortgage.entity.ApplicantType;
 import com.employee.loan_system.agrimortgage.entity.EncumbranceStatus;
@@ -60,6 +61,7 @@ public class AgriMortgageApplicationService {
     private final AgriMortgageDocumentRepository documentRepository;
     private final AgriEligibilityService eligibilityService;
     private final EncumbranceGatewayRetryWrapper encumbranceGatewayRetryWrapper;
+    private final AgriMortgageServicingService servicingService;
 
     private final Map<AgriMortgageApplicationStatus, List<AgriMortgageApplicationStatus>> allowedTransitions = new EnumMap<>(AgriMortgageApplicationStatus.class);
 
@@ -67,11 +69,13 @@ public class AgriMortgageApplicationService {
             AgriMortgageApplicationRepository applicationRepository,
             AgriMortgageDocumentRepository documentRepository,
             AgriEligibilityService eligibilityService,
-            EncumbranceGatewayRetryWrapper encumbranceGatewayRetryWrapper) {
+            EncumbranceGatewayRetryWrapper encumbranceGatewayRetryWrapper,
+            AgriMortgageServicingService servicingService) {
         this.applicationRepository = applicationRepository;
         this.documentRepository = documentRepository;
         this.eligibilityService = eligibilityService;
         this.encumbranceGatewayRetryWrapper = encumbranceGatewayRetryWrapper;
+        this.servicingService = servicingService;
 
         allowedTransitions.put(AgriMortgageApplicationStatus.DRAFT, List.of(AgriMortgageApplicationStatus.LAND_VERIFICATION, AgriMortgageApplicationStatus.REJECTED));
         allowedTransitions.put(AgriMortgageApplicationStatus.LAND_VERIFICATION, List.of(AgriMortgageApplicationStatus.ENCUMBRANCE_CHECK, AgriMortgageApplicationStatus.REJECTED));
@@ -242,7 +246,7 @@ public class AgriMortgageApplicationService {
         return toResponse(applicationRepository.save(application));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','REVIEWER')")
     public AgriEligibilityResponse evaluate(Long applicationId) {
         AgriMortgageApplication application = findApplication(applicationId);
@@ -294,9 +298,19 @@ public class AgriMortgageApplicationService {
         if (target == AgriMortgageApplicationStatus.DISBURSED) {
             application.setDisbursedAt(LocalDateTime.now());
         }
+        if (target == AgriMortgageApplicationStatus.CLOSED) {
+            AgriMortgageLoanAccount loanAccount = servicingService.findByApplicationId(applicationId);
+            if (loanAccount.getOutstandingPrincipal().compareTo(BigDecimal.ZERO) > 0) {
+                throw new IllegalArgumentException("Mortgage account still has outstanding principal and cannot be closed");
+            }
+            loanAccount.setStatus(com.employee.loan_system.agrimortgage.entity.AgriMortgageLoanAccountStatus.CLOSED);
+        }
         application.addStateHistory(history(current, target, request.getRemarks()));
-        applicationRepository.save(application);
-        return toResponse(application);
+        AgriMortgageApplication saved = applicationRepository.save(application);
+        if (target == AgriMortgageApplicationStatus.DISBURSED) {
+            servicingService.ensureLoanAccountForDisbursement(saved, "DISB-" + saved.getApplicationNumber());
+        }
+        return toResponse(saved);
     }
 
     @Transactional(readOnly = true)
@@ -443,6 +457,10 @@ public class AgriMortgageApplicationService {
         List<AgriMortgageDocumentResponse> documents = application.getDocuments().stream()
                 .map(this::toDocumentResponse)
                 .toList();
+        AgriMortgageLoanAccount loanAccount = application.getStatus() != null
+                && application.getStatus().ordinal() >= AgriMortgageApplicationStatus.DISBURSED.ordinal()
+                ? servicingService.findByApplicationId(application.getId())
+                : null;
 
         return AgriMortgageApplicationResponse.builder()
                 .id(application.getId())
@@ -469,6 +487,10 @@ public class AgriMortgageApplicationService {
                 .submittedAt(application.getSubmittedAt())
                 .sanctionedAt(application.getSanctionedAt())
                 .disbursedAt(application.getDisbursedAt())
+                .loanAccountNumber(loanAccount == null ? null : loanAccount.getAccountNumber())
+                .loanAccountStatus(loanAccount == null ? null : loanAccount.getStatus())
+                .outstandingPrincipal(loanAccount == null ? null : loanAccount.getOutstandingPrincipal())
+                .nextDueDate(loanAccount == null ? null : loanAccount.getNextDueDate())
                 .documentSummary(documentSummary(application))
                 .documents(documents)
                 .applicants(applicants)
