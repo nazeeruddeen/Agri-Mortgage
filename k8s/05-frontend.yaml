@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agri-mortgage-frontend
+  namespace: agri-mortgage
+spec:
+  replicas: 2
+  minReadySeconds: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: agri-mortgage-frontend
+  template:
+    metadata:
+      labels:
+        app: agri-mortgage-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: agri-mortgage-loan-system-frontend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          env:
+            - name: API_UPSTREAM
+              value: http://agri-mortgage-backend
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            periodSeconds: 20
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agri-mortgage-frontend
+  namespace: agri-mortgage
+spec:
+  selector:
+    app: agri-mortgage-frontend
+  ports:
+    - port: 80
+      targetPort: 80

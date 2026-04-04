@@ -43,3 +43,16 @@ services:
       SPRING_JPA_SHOW_SQL: "false"
     ports:
       - "8011:8011"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: agri-mortgage-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      API_UPSTREAM: http://backend:8011
+    ports:
+      - "4400:80"
