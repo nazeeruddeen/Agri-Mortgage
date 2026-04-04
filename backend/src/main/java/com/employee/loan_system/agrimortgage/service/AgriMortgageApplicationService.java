@@ -29,6 +29,8 @@ import com.employee.loan_system.agrimortgage.gateway.EncumbranceGatewayClient.En
 import com.employee.loan_system.agrimortgage.gateway.EncumbranceGatewayRetryWrapper;
 import com.employee.loan_system.agrimortgage.repository.AgriMortgageApplicationRepository;
 import com.employee.loan_system.agrimortgage.repository.AgriMortgageDocumentRepository;
+import com.employee.loan_system.agrimortgage.repository.AgriMortgageLoanAccountRepository;
+import com.employee.loan_system.agrimortgage.repository.AgriculturalLandParcelRepository;
 import com.employee.loan_system.exception.ResourceNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -44,9 +46,12 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class AgriMortgageApplicationService {
@@ -59,6 +64,8 @@ public class AgriMortgageApplicationService {
 
     private final AgriMortgageApplicationRepository applicationRepository;
     private final AgriMortgageDocumentRepository documentRepository;
+    private final AgriculturalLandParcelRepository landParcelRepository;
+    private final AgriMortgageLoanAccountRepository loanAccountRepository;
     private final AgriEligibilityService eligibilityService;
     private final EncumbranceGatewayRetryWrapper encumbranceGatewayRetryWrapper;
     private final AgriMortgageServicingService servicingService;
@@ -68,11 +75,15 @@ public class AgriMortgageApplicationService {
     public AgriMortgageApplicationService(
             AgriMortgageApplicationRepository applicationRepository,
             AgriMortgageDocumentRepository documentRepository,
+            AgriculturalLandParcelRepository landParcelRepository,
+            AgriMortgageLoanAccountRepository loanAccountRepository,
             AgriEligibilityService eligibilityService,
             EncumbranceGatewayRetryWrapper encumbranceGatewayRetryWrapper,
             AgriMortgageServicingService servicingService) {
         this.applicationRepository = applicationRepository;
         this.documentRepository = documentRepository;
+        this.landParcelRepository = landParcelRepository;
+        this.loanAccountRepository = loanAccountRepository;
         this.eligibilityService = eligibilityService;
         this.encumbranceGatewayRetryWrapper = encumbranceGatewayRetryWrapper;
         this.servicingService = servicingService;
@@ -338,63 +349,43 @@ public class AgriMortgageApplicationService {
             spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("requestedAmount"), minAmount));
         }
 
-        return applicationRepository.findAll(spec, pageable).map(this::toResponse);
+        Page<AgriMortgageApplication> page = applicationRepository.findAll(spec, pageable);
+        Map<Long, AgriMortgageLoanAccount> loanAccountsByApplicationId = batchLoanAccounts(page.getContent());
+        return page.map(application -> toResponse(application, loanAccountsByApplicationId.get(application.getId())));
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','REVIEWER')")
     public AgriMortgageDashboardResponse getDashboard() {
-        List<AgriMortgageApplication> applications = applicationRepository.findAll();
         Map<AgriMortgageApplicationStatus, Long> statusCounts = new EnumMap<>(AgriMortgageApplicationStatus.class);
+        for (AgriMortgageApplicationRepository.StatusCountRow row : applicationRepository.findStatusCounts()) {
+            statusCounts.put(row.getStatus(), row.getTotal());
+        }
         for (AgriMortgageApplicationStatus status : AgriMortgageApplicationStatus.values()) {
-            statusCounts.put(status, applicationRepository.countByStatus(status));
+            statusCounts.putIfAbsent(status, 0L);
         }
 
-        BigDecimal totalRequestedAmount = applications.stream()
-                .map(AgriMortgageApplication::getRequestedAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .setScale(2, RoundingMode.HALF_UP);
+        long totalApplications = applicationRepository.count();
+        long eligibleApplications = applicationRepository.countByEligibleTrue();
+        long documentReadyApplications = documentRepository.countApplicationsWithVerifiedRequiredDocuments();
+        long clearEncumbranceApplications = applicationRepository.countByEncumbranceVerificationStatus(EncumbranceVerificationStatus.CLEAR);
+        long encumberedApplications = applicationRepository.countByEncumbranceVerificationStatus(EncumbranceVerificationStatus.ENCUMBERED);
+        long pendingEncumbranceApplications = applicationRepository.countByEncumbranceVerificationStatusIn(
+                List.of(EncumbranceVerificationStatus.NOT_RUN, EncumbranceVerificationStatus.PENDING_VERIFICATION));
+        long gatewayErrorApplications = applicationRepository.countByEncumbranceVerificationStatus(EncumbranceVerificationStatus.GATEWAY_ERROR);
+        BigDecimal totalRequestedAmount = scale(applicationRepository.sumRequestedAmount());
+        long totalLandParcels = landParcelRepository.countAllParcels();
+        BigDecimal totalAppraisedValue = scale(landParcelRepository.sumTotalAppraisedValue());
 
-        long totalLandParcels = applications.stream()
-                .mapToLong(application -> application.getLandParcels().size())
-                .sum();
-
-        BigDecimal totalAppraisedValue = applications.stream()
-                .flatMap(application -> application.getLandParcels().stream())
-                .map(AgriculturalLandParcel::appraisalValue)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .setScale(2, RoundingMode.HALF_UP);
-
-        BigDecimal averageRequestedAmount = applications.isEmpty()
+        BigDecimal averageRequestedAmount = totalApplications == 0
                 ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
-                : totalRequestedAmount.divide(BigDecimal.valueOf(applications.size()), 2, RoundingMode.HALF_UP);
-
-        long documentReadyApplications = applications.stream()
-                .filter(application -> documentSummary(application).documentsComplete())
-                .count();
-
-        long clearEncumbranceApplications = applications.stream()
-                .filter(application -> application.getEncumbranceVerificationStatus() == EncumbranceVerificationStatus.CLEAR)
-                .count();
-
-        long encumberedApplications = applications.stream()
-                .filter(application -> application.getEncumbranceVerificationStatus() == EncumbranceVerificationStatus.ENCUMBERED)
-                .count();
-
-        long pendingEncumbranceApplications = applications.stream()
-                .filter(application -> application.getEncumbranceVerificationStatus() == EncumbranceVerificationStatus.NOT_RUN
-                        || application.getEncumbranceVerificationStatus() == EncumbranceVerificationStatus.PENDING_VERIFICATION)
-                .count();
-
-        long gatewayErrorApplications = applications.stream()
-                .filter(application -> application.getEncumbranceVerificationStatus() == EncumbranceVerificationStatus.GATEWAY_ERROR)
-                .count();
+                : totalRequestedAmount.divide(BigDecimal.valueOf(totalApplications), 2, RoundingMode.HALF_UP);
 
         return AgriMortgageDashboardResponse.builder()
-                .totalApplications(applications.size())
-                .eligibleApplications(applications.stream().filter(AgriMortgageApplication::isEligible).count())
+                .totalApplications(totalApplications)
+                .eligibleApplications(eligibleApplications)
                 .documentReadyApplications(documentReadyApplications)
-                .applicationsPendingDocuments(applications.size() - documentReadyApplications)
+                .applicationsPendingDocuments(totalApplications - documentReadyApplications)
                 .clearEncumbranceApplications(clearEncumbranceApplications)
                 .encumberedApplications(encumberedApplications)
                 .pendingEncumbranceApplications(pendingEncumbranceApplications)
@@ -439,6 +430,12 @@ public class AgriMortgageApplicationService {
     }
 
     private AgriMortgageApplicationResponse toResponse(AgriMortgageApplication application) {
+        return toResponse(application, null);
+    }
+
+    private AgriMortgageApplicationResponse toResponse(
+            AgriMortgageApplication application,
+            AgriMortgageLoanAccount prefetchedLoanAccount) {
         List<AgriMortgageApplicantResponse> applicants = application.getApplicants().stream()
                 .map(this::toApplicantResponse)
                 .toList();
@@ -457,10 +454,12 @@ public class AgriMortgageApplicationService {
         List<AgriMortgageDocumentResponse> documents = application.getDocuments().stream()
                 .map(this::toDocumentResponse)
                 .toList();
-        AgriMortgageLoanAccount loanAccount = application.getStatus() != null
-                && application.getStatus().ordinal() >= AgriMortgageApplicationStatus.DISBURSED.ordinal()
-                ? servicingService.findByApplicationId(application.getId())
-                : null;
+        AgriMortgageLoanAccount loanAccount = prefetchedLoanAccount;
+        if (loanAccount == null
+                && application.getStatus() != null
+                && application.getStatus().ordinal() >= AgriMortgageApplicationStatus.DISBURSED.ordinal()) {
+            loanAccount = servicingService.findByApplicationId(application.getId());
+        }
 
         return AgriMortgageApplicationResponse.builder()
                 .id(application.getId())
@@ -497,6 +496,29 @@ public class AgriMortgageApplicationService {
                 .landParcels(landParcels)
                 .stateHistory(history)
                 .build();
+    }
+
+    private Map<Long, AgriMortgageLoanAccount> batchLoanAccounts(List<AgriMortgageApplication> applications) {
+        Set<Long> applicationIds = applications.stream()
+                .filter(application -> application.getStatus() != null
+                        && application.getStatus().ordinal() >= AgriMortgageApplicationStatus.DISBURSED.ordinal())
+                .map(AgriMortgageApplication::getId)
+                .collect(Collectors.toSet());
+        if (applicationIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<Long, AgriMortgageLoanAccount> accountsByApplicationId = new HashMap<>();
+        for (AgriMortgageLoanAccount account : loanAccountRepository.findByApplication_IdIn(applicationIds)) {
+            if (account.getApplication() != null) {
+                accountsByApplicationId.put(account.getApplication().getId(), account);
+            }
+        }
+        return accountsByApplicationId;
+    }
+
+    private BigDecimal scale(BigDecimal value) {
+        return (value == null ? BigDecimal.ZERO : value).setScale(2, RoundingMode.HALF_UP);
     }
 
     private AgriMortgageApplicantResponse toApplicantResponse(AgriMortgageApplicant applicant) {

@@ -6,6 +6,7 @@ import {
   AdvanceAgriMortgageStatusRequest,
   AgriDistrictSummary,
   AgriEligibilityResponse,
+  AgriMortgageLoanAccountResponse,
   AgriMortgageApplicationResponse,
   AgriMortgageApplicationStatus,
   AgriMortgageDashboardResponse,
@@ -15,6 +16,8 @@ import {
   CreateAgriMortgageDocumentRequest,
   LoginRequest,
   PageResponse,
+  RecordAgriRepaymentRequest,
+  AgriRepaymentTransactionResponse,
   UpdateAgriMortgageDocumentStatusRequest,
   UserInfoResponse
 } from './agri-mortgage.models';
@@ -90,6 +93,20 @@ export class AgriMortgageApiService {
     return this.http.get<PageResponse<AgriMortgageApplicationResponse>>(this.url('/agri-mortgage-applications'), {
       params: this.params(filters)
     });
+  }
+
+  getLoanAccount(applicationId: number): Observable<AgriMortgageLoanAccountResponse> {
+    return this.http.get<AgriMortgageLoanAccountResponse>(this.url(`/agri-mortgage-applications/${applicationId}/loan-account`));
+  }
+
+  listLoanAccounts(filters: { page?: number; size?: number } = {}): Observable<PageResponse<AgriMortgageLoanAccountResponse>> {
+    return this.http.get<PageResponse<AgriMortgageLoanAccountResponse>>(this.url('/agri-mortgage-applications/loan-accounts'), {
+      params: this.params(filters)
+    });
+  }
+
+  recordRepayment(accountId: number, payload: RecordAgriRepaymentRequest): Observable<AgriRepaymentTransactionResponse> {
+    return this.http.post<AgriRepaymentTransactionResponse>(this.url(`/agri-mortgage-applications/loan-accounts/${accountId}/repayments`), payload);
   }
 
   summary(): Observable<AgriMortgageDashboardResponse> {

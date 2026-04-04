@@ -11,6 +11,7 @@ import com.employee.loan_system.agrimortgage.entity.AgriMortgageApplicant;
 import com.employee.loan_system.agrimortgage.entity.AgriMortgageDocument;
 import com.employee.loan_system.agrimortgage.entity.AgriMortgageDocumentStatus;
 import com.employee.loan_system.agrimortgage.entity.AgriMortgageDocumentType;
+import com.employee.loan_system.agrimortgage.entity.AgriMortgageLoanAccount;
 import com.employee.loan_system.agrimortgage.entity.AgriculturalLandParcel;
 import com.employee.loan_system.agrimortgage.entity.ApplicantType;
 import com.employee.loan_system.agrimortgage.entity.EncumbranceStatus;
@@ -23,10 +24,16 @@ import com.employee.loan_system.agrimortgage.gateway.EncumbranceGatewayClient.En
 import com.employee.loan_system.agrimortgage.gateway.EncumbranceGatewayRetryWrapper;
 import com.employee.loan_system.agrimortgage.repository.AgriMortgageApplicationRepository;
 import com.employee.loan_system.agrimortgage.repository.AgriMortgageDocumentRepository;
+import com.employee.loan_system.agrimortgage.repository.AgriMortgageLoanAccountRepository;
+import com.employee.loan_system.agrimortgage.repository.AgriculturalLandParcelRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -36,6 +43,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,6 +55,12 @@ class AgriMortgageApplicationServiceTest {
 
     @Mock
     private AgriMortgageDocumentRepository documentRepository;
+
+    @Mock
+    private AgriculturalLandParcelRepository landParcelRepository;
+
+    @Mock
+    private AgriMortgageLoanAccountRepository loanAccountRepository;
 
     @Mock
     private EncumbranceGatewayRetryWrapper encumbranceGatewayRetryWrapper;
@@ -145,28 +160,22 @@ class AgriMortgageApplicationServiceTest {
     @Test
     void dashboardShouldAggregateCountsAndAmounts() {
         AgriMortgageApplicationService service = service();
-        AgriMortgageApplication draft = buildApplication();
-        draft.setStatus(AgriMortgageApplicationStatus.DRAFT);
-        draft.setEncumbranceVerificationStatus(EncumbranceVerificationStatus.ENCUMBERED);
-        AgriMortgageApplication sanctioned = buildApplication();
-        sanctioned.setId(2L);
-        sanctioned.setStatus(AgriMortgageApplicationStatus.SANCTIONED);
-        sanctioned.setEligible(true);
-        sanctioned.setRequestedAmount(new BigDecimal("2500000"));
-        sanctioned.setEncumbranceVerificationStatus(EncumbranceVerificationStatus.CLEAR);
-        sanctioned.setLandParcels(new ArrayList<>(sanctioned.getLandParcels()));
-        sanctioned.addDocument(createDocument(sanctioned, AgriMortgageDocumentType.OWNERSHIP_PROOF, AgriMortgageDocumentStatus.VERIFIED));
-        sanctioned.addDocument(createDocument(sanctioned, AgriMortgageDocumentType.LAND_VALUATION_REPORT, AgriMortgageDocumentStatus.VERIFIED));
-        when(applicationRepository.findAll()).thenReturn(List.of(draft, sanctioned));
-        when(applicationRepository.countByStatus(AgriMortgageApplicationStatus.DRAFT)).thenReturn(1L);
-        when(applicationRepository.countByStatus(AgriMortgageApplicationStatus.LAND_VERIFICATION)).thenReturn(0L);
-        when(applicationRepository.countByStatus(AgriMortgageApplicationStatus.ENCUMBRANCE_CHECK)).thenReturn(0L);
-        when(applicationRepository.countByStatus(AgriMortgageApplicationStatus.CREDIT_REVIEW)).thenReturn(0L);
-        when(applicationRepository.countByStatus(AgriMortgageApplicationStatus.LEGAL_REVIEW)).thenReturn(0L);
-        when(applicationRepository.countByStatus(AgriMortgageApplicationStatus.SANCTIONED)).thenReturn(1L);
-        when(applicationRepository.countByStatus(AgriMortgageApplicationStatus.DISBURSED)).thenReturn(0L);
-        when(applicationRepository.countByStatus(AgriMortgageApplicationStatus.REJECTED)).thenReturn(0L);
-        when(applicationRepository.countByStatus(AgriMortgageApplicationStatus.CLOSED)).thenReturn(0L);
+        when(applicationRepository.findStatusCounts()).thenReturn(List.of(
+                statusCount(AgriMortgageApplicationStatus.DRAFT, 1L),
+                statusCount(AgriMortgageApplicationStatus.SANCTIONED, 1L)
+        ));
+        when(applicationRepository.count()).thenReturn(2L);
+        when(applicationRepository.countByEligibleTrue()).thenReturn(1L);
+        when(documentRepository.countApplicationsWithVerifiedRequiredDocuments()).thenReturn(1L);
+        when(applicationRepository.countByEncumbranceVerificationStatus(EncumbranceVerificationStatus.CLEAR)).thenReturn(1L);
+        when(applicationRepository.countByEncumbranceVerificationStatus(EncumbranceVerificationStatus.ENCUMBERED)).thenReturn(1L);
+        when(applicationRepository.countByEncumbranceVerificationStatusIn(List.of(
+                EncumbranceVerificationStatus.NOT_RUN,
+                EncumbranceVerificationStatus.PENDING_VERIFICATION))).thenReturn(0L);
+        when(applicationRepository.countByEncumbranceVerificationStatus(EncumbranceVerificationStatus.GATEWAY_ERROR)).thenReturn(0L);
+        when(applicationRepository.sumRequestedAmount()).thenReturn(new BigDecimal("5500000.00"));
+        when(landParcelRepository.countAllParcels()).thenReturn(2L);
+        when(landParcelRepository.sumTotalAppraisedValue()).thenReturn(new BigDecimal("11500000.00"));
 
         AgriMortgageDashboardResponse response = service.getDashboard();
 
@@ -180,6 +189,31 @@ class AgriMortgageApplicationServiceTest {
         assertThat(response.gatewayErrorApplications()).isZero();
         assertThat(response.sanctionedApplications()).isEqualTo(1);
         assertThat(response.totalRequestedAmount()).isEqualByComparingTo("5500000.00");
+        verify(applicationRepository, never()).findAll();
+    }
+
+    @Test
+    void searchShouldBatchLoanAccountEnrichmentForDisbursedRows() {
+        AgriMortgageApplicationService service = service();
+        AgriMortgageApplication disbursed = buildApplication();
+        disbursed.setStatus(AgriMortgageApplicationStatus.DISBURSED);
+        disbursed.setDisbursedAt(java.time.LocalDateTime.now());
+        AgriMortgageLoanAccount loanAccount = new AgriMortgageLoanAccount();
+        loanAccount.setId(44L);
+        loanAccount.setApplication(disbursed);
+        loanAccount.setAccountNumber("AGL-000044");
+        loanAccount.setOutstandingPrincipal(new BigDecimal("2500000.00"));
+
+        when(applicationRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(disbursed), PageRequest.of(0, 10), 1));
+        when(loanAccountRepository.findByApplication_IdIn(any()))
+                .thenReturn(List.of(loanAccount));
+
+        var page = service.search(null, null, null, null, PageRequest.of(0, 10));
+
+        assertThat(page.getContent()).hasSize(1);
+        assertThat(page.getContent().get(0).loanAccountNumber()).isEqualTo("AGL-000044");
+        verify(servicingService, never()).findByApplicationId(any());
     }
 
     private CreateAgriMortgageApplicationRequest buildRequest() {
@@ -278,8 +312,24 @@ class AgriMortgageApplicationServiceTest {
         return new AgriMortgageApplicationService(
                 applicationRepository,
                 documentRepository,
+                landParcelRepository,
+                loanAccountRepository,
                 new AgriEligibilityService(),
                 encumbranceGatewayRetryWrapper,
                 servicingService);
+    }
+
+    private AgriMortgageApplicationRepository.StatusCountRow statusCount(AgriMortgageApplicationStatus status, long total) {
+        return new AgriMortgageApplicationRepository.StatusCountRow() {
+            @Override
+            public AgriMortgageApplicationStatus getStatus() {
+                return status;
+            }
+
+            @Override
+            public long getTotal() {
+                return total;
+            }
+        };
     }
 }

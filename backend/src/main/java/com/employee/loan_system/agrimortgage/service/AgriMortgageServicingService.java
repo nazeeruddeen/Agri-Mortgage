@@ -11,6 +11,7 @@ import com.employee.loan_system.agrimortgage.entity.AgriRepaymentInstallment;
 import com.employee.loan_system.agrimortgage.entity.AgriRepaymentInstallmentStatus;
 import com.employee.loan_system.agrimortgage.entity.AgriRepaymentTransaction;
 import com.employee.loan_system.agrimortgage.repository.AgriMortgageLoanAccountRepository;
+import com.employee.loan_system.agrimortgage.repository.AgriRepaymentInstallmentRepository;
 import com.employee.loan_system.exception.BusinessRuleException;
 import com.employee.loan_system.exception.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,12 +35,15 @@ import java.util.List;
 public class AgriMortgageServicingService {
 
     private final AgriMortgageLoanAccountRepository loanAccountRepository;
+    private final AgriRepaymentInstallmentRepository installmentRepository;
     private final BigDecimal defaultInterestRate;
 
     public AgriMortgageServicingService(
             AgriMortgageLoanAccountRepository loanAccountRepository,
+            AgriRepaymentInstallmentRepository installmentRepository,
             @Value("${app.agri.servicing.default-interest-rate:9.50}") BigDecimal defaultInterestRate) {
         this.loanAccountRepository = loanAccountRepository;
+        this.installmentRepository = installmentRepository;
         this.defaultInterestRate = defaultInterestRate;
     }
 
@@ -159,6 +163,35 @@ public class AgriMortgageServicingService {
 
         loanAccountRepository.save(account);
         return toTransactionResponse(transaction);
+    }
+
+    @Transactional
+    public int ageOverdueInstallments(LocalDate asOfDate) {
+        LocalDate effectiveDate = asOfDate == null ? LocalDate.now() : asOfDate;
+        List<AgriRepaymentInstallment> overdueCandidates = installmentRepository.findPastDueInstallments(effectiveDate);
+        if (overdueCandidates.isEmpty()) {
+            return 0;
+        }
+
+        List<AgriMortgageLoanAccount> touchedAccounts = new ArrayList<>();
+        for (AgriRepaymentInstallment installment : overdueCandidates) {
+            if (installment.getStatus() != AgriRepaymentInstallmentStatus.OVERDUE) {
+                installment.setStatus(AgriRepaymentInstallmentStatus.OVERDUE);
+                installment.setPaidAt(null);
+                if (installment.getRemarks() == null || installment.getRemarks().isBlank()) {
+                    installment.setRemarks("Marked overdue during servicing aging sweep on " + effectiveDate);
+                }
+            }
+
+            AgriMortgageLoanAccount account = installment.getLoanAccount();
+            if (account != null && touchedAccounts.stream().noneMatch(existing -> existing.getId().equals(account.getId()))) {
+                refreshNextDueDate(account, effectiveDate);
+                touchedAccounts.add(account);
+            }
+        }
+
+        loanAccountRepository.saveAll(touchedAccounts);
+        return overdueCandidates.size();
     }
 
     private AgriMortgageLoanAccount createLoanAccount(AgriMortgageApplication application, String disbursementReference) {

@@ -17,13 +17,15 @@ It demonstrates:
 - explicit operator-console feedback for retryable encumbrance fallback and document-readiness blockers
 - database-backed district reporting instead of in-memory grouping for large operator datasets
 - workflow progression across verification, review, sanction, disbursement, and closure states
+- mortgage servicing after disbursement, including loan-account materialization, EMI schedule generation, repayment posting, and closure blocking while outstanding principal remains
+- scheduled overdue aging so unpaid installments move to `OVERDUE` even when no repayment event occurs that day
 - paginated search, dashboard summary, district summary, and Excel export
 - secured Spring Boot APIs with JWT-backed Angular access
 - operational runbook and recovery notes in `RUNBOOK.md`
 
 ## Tech Stack
 
-- Java 17
+- Java 21
 - Spring Boot 3.2
 - Spring Data JPA / Hibernate
 - MySQL
@@ -79,16 +81,18 @@ docker compose up -d --build
 
 ## Main Workflow
 
-1. Sign in with a seeded user.
+1. Sign in with a provisioned account or a local bootstrap user.
 2. Create a draft agri mortgage application with co-borrowers and land parcels.
 3. Search and select the application.
 4. Upload and review land/legal document metadata for the selected case.
 5. Run encumbrance verification and inspect parcel-level gateway results. If the gateway exhausts retries, the application stays in a retryable fallback state instead of silently failing.
 6. Run eligibility evaluation.
 7. Advance the application through the configured mortgage workflow. Credit review now requires clear encumbrance verification, and sanction requires required documents to be verified.
-8. Review dashboard backlog KPIs, readiness counts, and district summary updates. The district summary is computed in SQL so it stays responsive as the application register grows.
-9. Export the application register to Excel when needed.
-10. If two operators touch the same application concurrently, expect a `409 Conflict` and reload the latest application before retrying. The operator console now surfaces this as an explicit conflict state instead of a generic failure.
+8. Disburse the sanctioned case to materialize the mortgage servicing account and repayment schedule.
+9. Review dashboard backlog KPIs, readiness counts, district summary updates, and servicing-account state. The district summary is computed in SQL so it stays responsive as the application register grows.
+10. Post repayments against the servicing account and monitor installment status, outstanding principal, and prepayment effects.
+11. Export the application register to Excel when needed.
+12. If two operators touch the same application concurrently, expect a `409 Conflict` and reload the latest application before retrying. The operator console now surfaces this as an explicit conflict state instead of a generic failure.
 
 ## Production deployment posture
 

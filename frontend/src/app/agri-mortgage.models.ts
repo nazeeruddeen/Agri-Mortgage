@@ -15,6 +15,9 @@ export type LandType = 'IRRIGATED' | 'DRY' | 'HORTICULTURE' | 'FOREST_ADJACENT';
 export type OwnershipStatus = 'SOLE' | 'JOINT' | 'DISPUTED';
 export type EncumbranceStatus = 'CLEAR' | 'ENCUMBERED' | 'PENDING';
 export type EncumbranceVerificationStatus = 'NOT_RUN' | 'CLEAR' | 'ENCUMBERED' | 'PENDING_VERIFICATION' | 'GATEWAY_ERROR';
+export type AgriMortgageLoanAccountStatus = 'ACTIVE' | 'CLOSED';
+export type AgriRepaymentInstallmentStatus = 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE';
+export type AgriRepaymentMode = 'UPI' | 'NEFT' | 'IMPS' | 'CASH' | 'AUTO_DEBIT' | 'CHEQUE';
 export type AgriMortgageDocumentType =
   | 'PATTADAR_PASSBOOK'
   | 'OWNERSHIP_PROOF'
@@ -106,6 +109,14 @@ export interface AdvanceAgriMortgageStatusRequest {
   remarks?: string;
 }
 
+export interface RecordAgriRepaymentRequest {
+  amount: number | string;
+  paymentMode: AgriRepaymentMode;
+  transactionReference: string;
+  paymentDate: string;
+  notes?: string;
+}
+
 export interface AgriMortgageApplicantResponse {
   id: number;
   applicantType: ApplicantType;
@@ -188,11 +199,63 @@ export interface AgriMortgageApplicationResponse {
   submittedAt?: string;
   sanctionedAt?: string;
   disbursedAt?: string;
+  loanAccountNumber?: string | null;
+  loanAccountStatus?: AgriMortgageLoanAccountStatus | null;
+  outstandingPrincipal?: number | null;
+  nextDueDate?: string | null;
   documentSummary: AgriMortgageDocumentSummaryResponse;
   documents: AgriMortgageDocumentResponse[];
   applicants: AgriMortgageApplicantResponse[];
   landParcels: AgriculturalLandParcelResponse[];
   stateHistory: AgriMortgageApplicationStateHistoryResponse[];
+}
+
+export interface AgriRepaymentInstallmentResponse {
+  id: number;
+  installmentNumber: number;
+  dueDate: string;
+  openingPrincipal: number;
+  principalDue: number;
+  interestDue: number;
+  principalPaid: number;
+  interestPaid: number;
+  remainingDue: number;
+  status: AgriRepaymentInstallmentStatus;
+  paidAt?: string | null;
+  remarks?: string | null;
+}
+
+export interface AgriRepaymentTransactionResponse {
+  id: number;
+  transactionReference: string;
+  amount: number;
+  appliedPrincipalAmount: number;
+  prepaymentPrincipalAmount: number;
+  appliedInterestAmount: number;
+  paymentMode: AgriRepaymentMode;
+  paymentDate: string;
+  notes?: string | null;
+  recordedBy: string;
+  recordedAt: string;
+}
+
+export interface AgriMortgageLoanAccountResponse {
+  id: number;
+  applicationId: number;
+  applicationNumber: string;
+  accountNumber: string;
+  primaryApplicantName: string;
+  principalAmount: number;
+  annualInterestRate: number;
+  tenureMonths: number;
+  monthlyInstallmentAmount: number;
+  outstandingPrincipal: number;
+  disbursementReference: string;
+  status: AgriMortgageLoanAccountStatus;
+  disbursedAt: string;
+  nextDueDate?: string | null;
+  installments: AgriRepaymentInstallmentResponse[];
+  transactions: AgriRepaymentTransactionResponse[];
 }
 
 export interface AgriEligibilityRuleResult {

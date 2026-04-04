@@ -32,6 +32,9 @@ Roles used by the project:
 | `POST` | `/{applicationId}/evaluate` | Run eligibility evaluation |
 | `POST` | `/{applicationId}/status` | Advance the workflow status |
 | `GET` | `/` | Search applications with filters and pagination |
+| `GET` | `/{applicationId}/loan-account` | Fetch the servicing account for a disbursed mortgage case |
+| `GET` | `/loan-accounts` | List servicing accounts with pagination |
+| `POST` | `/loan-accounts/{accountId}/repayments` | Record a repayment against a servicing account |
 | `GET` | `/summary` | Fetch dashboard-level aggregate metrics |
 | `GET` | `/reports/district-summary` | Fetch database-aggregated district reporting data |
 | `GET` | `/export` | Download the Excel application register |
@@ -115,6 +118,7 @@ Important workflow guards:
 - `CREDIT_REVIEW` requires `encumbranceVerificationStatus = CLEAR`
 - `SANCTIONED` requires required land/legal documents to be verified
 - `SANCTIONED` also requires the application to be eligible
+- `CLOSED` requires the servicing account to have zero outstanding principal
 
 Valid target statuses:
 
@@ -153,6 +157,32 @@ Returns:
 - total land parcels
 - total appraised value
 
+## Mortgage Servicing
+
+`GET /api/v1/agri-mortgage-applications/{applicationId}/loan-account`
+
+Returns the servicing account that is materialized when a sanctioned case is disbursed.
+
+`GET /api/v1/agri-mortgage-applications/loan-accounts`
+
+Returns a paginated servicing-account register using the standard Spring page shape:
+
+- `content`
+- `number`
+- `size`
+- `totalElements`
+- `totalPages`
+
+`POST /api/v1/agri-mortgage-applications/loan-accounts/{accountId}/repayments`
+
+Repayment servicing rules:
+
+- interest is applied before scheduled principal
+- any remaining amount is treated as principal curtailment while outstanding principal remains
+- prepayment triggers future-installment recast instead of a hard failure
+- accounts automatically close when outstanding principal reaches zero
+- a scheduled overdue-aging sweep marks unpaid past-due installments as `OVERDUE` even when no repayment is posted that day
+
 ## District Summary
 
 `GET /api/v1/agri-mortgage-applications/reports/district-summary`
@@ -168,6 +198,7 @@ The main application response includes:
 - co-borrowers
 - land parcels
 - encumbrance verification status, summary, and timestamp
+- servicing-account summary fields such as `loanAccountNumber`, `loanAccountStatus`, `outstandingPrincipal`, and `nextDueDate`
 - parcel-level encumbrance check details
 - document list
 - document completeness summary

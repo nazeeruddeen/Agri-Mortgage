@@ -1,0 +1,136 @@
+<ng-container *ngIf="!isAuthenticated; else workspace">
+  <div class="login-shell">
+    <section class="login-panel">
+      <div class="eyebrow">Secure operator access</div>
+      <h1>{{ title }}</h1>
+      <p>Sign in with a seeded backend user to run the real agri mortgage workflow on <strong>{{ apiBaseUrl }}</strong>.</p>
+      <form class="form" [formGroup]="authForm">
+        <label>
+          Username
+          <input type="text" formControlName="username" placeholder="operator username">
+        </label>
+        <label>
+          Password
+          <input type="password" formControlName="password" placeholder="provisioned password">
+        </label>
+        <button type="button" class="primary" (click)="login()" [disabled]="actionBusy === 'login' || bootstrapping">
+          {{ actionBusy === 'login' ? 'Signing in...' : 'Sign in' }}
+        </button>
+      </form>
+      <div class="seeded-users">
+        <span>Operator access:</span>
+        <small>Local bootstrap users are available only when the `local` profile is enabled and credentials are supplied through environment variables.</small>
+      </div>
+      <div class="status" [attr.data-kind]="notice.kind">{{ notice.text }}</div>
+    </section>
+  </div>
+</ng-container>
+
+<ng-template #workspace>
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar__logo">
+        <div class="logo-icon"></div>
+        <div>
+          <h2>AgriMortgage</h2>
+          <small>{{ currentUser?.username }} - {{ currentUser?.role }}</small>
+        </div>
+      </div>
+      <nav class="sidebar__nav">
+        <button [class.active]="activeTab === 'dashboard'" (click)="setTab('dashboard')">Overview</button>
+        <button [class.active]="activeTab === 'intake'" (click)="setTab('intake')">Intake</button>
+        <button [class.active]="activeTab === 'search'" (click)="setTab('search')">Applications</button>
+        <button [class.active]="activeTab === 'operations'" (click)="setTab('operations')">Operations</button>
+      </nav>
+      <button type="button" class="ghost sidebar__logout" (click)="logout()" [disabled]="actionBusy === 'logout'">
+        {{ actionBusy === 'logout' ? 'Signing out...' : 'Sign out' }}
+      </button>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <h1>{{ title }}</h1>
+          <p class="subhead">Live agricultural mortgage intake, eligibility, land review, and workflow progression.</p>
+        </div>
+        <div class="topbar__actions">
+          <span class="api-note">API: <strong>{{ apiBaseUrl }}</strong></span>
+          <button type="button" class="primary ghost" (click)="refreshAll()" [disabled]="pageBusy">
+            {{ pageBusy ? 'Refreshing...' : 'Refresh Live Data' }}
+          </button>
+        </div>
+      </header>
+
+      <div class="status" [attr.data-kind]="notice.kind">{{ notice.text }}</div>
+
+      <app-agri-dashboard
+  *ngIf="activeTab === 'dashboard'"
+  [summary]="summary"
+  [districtSummary]="districtSummary"
+  [actionBusy]="actionBusy"
+  (exportApplications)="exportApplications()">
+</app-agri-dashboard>
+
+      <app-agri-intake
+        *ngIf="activeTab === 'intake'"
+        [applicationForm]="applicationForm"
+        [coBorrowersArray]="coBorrowersArray"
+        [landParcelsArray]="landParcelsArray"
+        [relationshipTypes]="relationshipTypes"
+        [landTypes]="landTypes"
+        [ownershipStatuses]="ownershipStatuses"
+        [encumbranceStatuses]="encumbranceStatuses"
+        [actionBusy]="actionBusy"
+        (addCoBorrower)="addCoBorrower()"
+        (removeCoBorrower)="removeCoBorrower($event)"
+        (addLandParcel)="addLandParcel()"
+        (removeLandParcel)="removeLandParcel($event)"
+        (createApplication)="createApplication()">
+      </app-agri-intake>
+
+        <app-agri-search
+  *ngIf="activeTab === 'search'"
+  [searchForm]="searchForm"
+  [applications]="applications"
+  [selectedApplication]="selectedApplication"
+  [statuses]="statuses"
+  [reportPage]="reportPage"
+  (applySearch)="applySearch()"
+  (clearSearch)="clearSearch()"
+  (previousPage)="previousPage()"
+  (nextPage)="nextPage()"
+  (selectApplication)="selectApplication($event)">
+</app-agri-search>
+
+      <app-agri-operations
+        *ngIf="activeTab === 'operations'"
+        [eligibility]="eligibility"
+        [selectedApplication]="selectedApplication"
+        [selectedLoanAccount]="selectedLoanAccount"
+        [statusForm]="statusForm"
+        [documentForm]="documentForm"
+        [repaymentForm]="repaymentForm"
+        [documentTypes]="documentTypes"
+        [paymentModes]="paymentModes"
+        [allowedTransitions]="allowedTransitions.bind(this)"
+        [formatAmount]="formatAmount.bind(this)"
+        [formatLabel]="formatLabel.bind(this)"
+        [servicingStatusTone]="servicingStatusTone.bind(this)"
+        [badgeTone]="badgeTone.bind(this)"
+        [documentReadinessLabel]="documentReadinessLabel.bind(this)"
+        [canShowServicing]="canShowServicing.bind(this)"
+        [encumbranceStatusLabel]="encumbranceStatusLabel.bind(this)"
+        [encumbranceRetryLabel]="encumbranceRetryLabel.bind(this)"
+        [encumbranceRetryTone]="encumbranceRetryTone.bind(this)"
+        [actionBusy]="actionBusy"
+        (evaluateSelected)="evaluateSelected()"
+        (runEncumbranceCheck)="runEncumbranceCheck()"
+        (advanceStatus)="advanceStatus()"
+        (addDocument)="addDocument()"
+        (verifyDocument)="verifyDocument($event.document, $event.status)"
+        (recordRepayment)="recordRepayment()">
+      </app-agri-operations>
+    </main>
+  </div>
+</ng-template>
+

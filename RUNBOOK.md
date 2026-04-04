@@ -5,6 +5,8 @@ This runbook matches the current production hardening in the codebase:
 - retry-aware encumbrance verification
 - explicit `409 Conflict` handling for concurrent operator updates
 - document-readiness visibility in the operator console
+- mortgage servicing accounts with repayment posting and installment tracking
+- scheduled overdue-aging sweep for unpaid installments
 - database-backed district reporting
 - ExternalSecret-backed runtime configuration and local-profile-gated bootstrap users
 
@@ -19,6 +21,7 @@ This runbook matches the current production hardening in the codebase:
 - Summary: `/api/v1/agri-mortgage-applications/summary`
 - District reports: `/api/v1/agri-mortgage-applications/reports/district-summary`
 - Excel export: `/api/v1/agri-mortgage-applications/export`
+- Servicing account APIs: `/api/v1/agri-mortgage-applications/{applicationId}/loan-account` and `/api/v1/agri-mortgage-applications/loan-accounts`
 
 ## What to watch
 - `409 Conflict` from concurrent parcel or application updates
@@ -26,6 +29,7 @@ This runbook matches the current production hardening in the codebase:
 - Missing document readiness blockers
 - District summary latency
 - Reviewer backlog and pending document counts
+- Outstanding principal and overdue installment drift on disbursed mortgage accounts
 
 ## Encumbrance fallback handling
 1. Check whether the encumbrance state is `GATEWAY_ERROR`.
@@ -43,6 +47,17 @@ This runbook matches the current production hardening in the codebase:
 1. Treat `409 Conflict` as a sign of a stale UI or a second operator update.
 2. Reload the latest application state before retrying.
 3. Preserve the latest audit trail so the changed state is explainable.
+
+## Mortgage servicing handling
+1. Confirm the selected disbursed case has a servicing account number in the operator console.
+2. Review outstanding principal, next due date, and installment status before posting a repayment.
+3. Treat prepayment as principal curtailment and verify the recast schedule after posting the transaction.
+4. Do not close the mortgage workflow while outstanding principal remains on the servicing account.
+
+## Overdue aging handling
+1. The servicing scheduler marks unpaid past-due installments as `OVERDUE` on the configured overnight sweep.
+2. If an installment still appears `PENDING` after its due date, check the scheduler logs and the latest application refresh before taking manual action.
+3. Do not manually flip installment status in the database to compensate for a missed sweep; fix the scheduler path and rerun the aging process.
 
 ## Incident checklist
 - Preserve correlation IDs and request IDs before remediation.
