@@ -80,6 +80,7 @@ pipeline {
                 sh 'kubectl apply -f k8s/03-mysql.yaml'
                 sh 'kubectl apply -f k8s/04-backend.yaml'
                 sh 'kubectl apply -f k8s/05-frontend.yaml'
+                sh 'kubectl apply -f k8s/06-ingress.yaml'
                 sh 'kubectl rollout status deployment/agri-mortgage-backend -n agri-mortgage --timeout=180s'
                 sh 'kubectl rollout status deployment/agri-mortgage-frontend -n agri-mortgage --timeout=180s'
             }

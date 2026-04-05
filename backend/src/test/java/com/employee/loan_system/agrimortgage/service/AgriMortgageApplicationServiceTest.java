@@ -26,6 +26,7 @@ import com.employee.loan_system.agrimortgage.repository.AgriMortgageApplicationR
 import com.employee.loan_system.agrimortgage.repository.AgriMortgageDocumentRepository;
 import com.employee.loan_system.agrimortgage.repository.AgriMortgageLoanAccountRepository;
 import com.employee.loan_system.agrimortgage.repository.AgriculturalLandParcelRepository;
+import com.employee.loan_system.exception.BusinessRuleException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -153,7 +154,7 @@ class AgriMortgageApplicationServiceTest {
         request.setRemarks("Skip to disbursement");
 
         assertThatThrownBy(() -> service.advanceStatus(1L, request))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("Invalid transition");
     }
 

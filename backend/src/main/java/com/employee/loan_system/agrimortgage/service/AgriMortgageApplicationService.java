@@ -31,6 +31,7 @@ import com.employee.loan_system.agrimortgage.repository.AgriMortgageApplicationR
 import com.employee.loan_system.agrimortgage.repository.AgriMortgageDocumentRepository;
 import com.employee.loan_system.agrimortgage.repository.AgriMortgageLoanAccountRepository;
 import com.employee.loan_system.agrimortgage.repository.AgriculturalLandParcelRepository;
+import com.employee.loan_system.exception.BusinessRuleException;
 import com.employee.loan_system.exception.ResourceNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -206,7 +207,7 @@ public class AgriMortgageApplicationService {
     public AgriMortgageApplicationResponse runEncumbranceCheck(Long applicationId) {
         AgriMortgageApplication application = findApplication(applicationId);
         if (application.getLandParcels().isEmpty()) {
-            throw new IllegalArgumentException("At least one land parcel is required before encumbrance verification");
+            throw new BusinessRuleException("At least one land parcel is required before encumbrance verification");
         }
 
         int clearCount = 0;
@@ -281,22 +282,22 @@ public class AgriMortgageApplicationService {
             return toResponse(application);
         }
         if (!allowedTransitions.getOrDefault(current, List.of()).contains(target)) {
-            throw new IllegalArgumentException("Invalid transition from " + current + " to " + target);
+            throw new BusinessRuleException("Invalid transition from " + current + " to " + target);
         }
         if (target == AgriMortgageApplicationStatus.CREDIT_REVIEW && application.getEncumbranceVerificationStatus() != EncumbranceVerificationStatus.CLEAR) {
-            throw new IllegalArgumentException("Only applications with clear encumbrance verification can move to CREDIT_REVIEW");
+            throw new BusinessRuleException("Only applications with clear encumbrance verification can move to CREDIT_REVIEW");
         }
         if (target == AgriMortgageApplicationStatus.SANCTIONED && !application.isEligible()) {
-            throw new IllegalArgumentException("Only eligible applications can be sanctioned");
+            throw new BusinessRuleException("Only eligible applications can be sanctioned");
         }
         if (target == AgriMortgageApplicationStatus.SANCTIONED && !documentSummary(application).documentsComplete()) {
-            throw new IllegalArgumentException("Required land and legal documents must be verified before sanction");
+            throw new BusinessRuleException("Required land and legal documents must be verified before sanction");
         }
         if (target == AgriMortgageApplicationStatus.DISBURSED && current != AgriMortgageApplicationStatus.SANCTIONED) {
-            throw new IllegalArgumentException("Only sanctioned applications can be disbursed");
+            throw new BusinessRuleException("Only sanctioned applications can be disbursed");
         }
         if (target == AgriMortgageApplicationStatus.CLOSED && current != AgriMortgageApplicationStatus.DISBURSED) {
-            throw new IllegalArgumentException("Only disbursed applications can be closed");
+            throw new BusinessRuleException("Only disbursed applications can be closed");
         }
 
         application.setStatus(target);
@@ -312,7 +313,7 @@ public class AgriMortgageApplicationService {
         if (target == AgriMortgageApplicationStatus.CLOSED) {
             AgriMortgageLoanAccount loanAccount = servicingService.findByApplicationId(applicationId);
             if (loanAccount.getOutstandingPrincipal().compareTo(BigDecimal.ZERO) > 0) {
-                throw new IllegalArgumentException("Mortgage account still has outstanding principal and cannot be closed");
+                throw new BusinessRuleException("Mortgage account still has outstanding principal and cannot be closed");
             }
             loanAccount.setStatus(com.employee.loan_system.agrimortgage.entity.AgriMortgageLoanAccountStatus.CLOSED);
         }

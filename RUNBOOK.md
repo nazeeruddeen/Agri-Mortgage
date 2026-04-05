@@ -68,6 +68,9 @@ This runbook matches the current production hardening in the codebase:
 ## Deployment posture
 - Production expects connection settings and JWT secrets from the cluster secret store, not committed YAML values.
 - The backend is deployed as a two-replica rolling update target.
+- External access is expected through the ingress manifest at `k8s/06-ingress.yaml`, with `/` routed to the frontend service and `/api` routed to the backend service.
+- Replace the placeholder host `agri-mortgage.example.com` and TLS secret `agri-mortgage-tls` with platform-owned DNS and certificate values before live deployment.
+- Keep Actuator endpoints internal to the cluster unless the platform team explicitly exposes them through a protected operations ingress.
 - The in-repo MySQL manifest is for local or integration use; production should point at a managed HA MySQL service.
 
 ## Local verification
