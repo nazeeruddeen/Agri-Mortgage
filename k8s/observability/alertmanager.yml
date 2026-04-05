@@ -1,8 +1,13 @@
 global:
   resolve_timeout: 5m
+  smtp_smarthost: smtp.gmail.com:587
+  smtp_from: nazeershaik.ai@gmail.com
+  smtp_auth_username: nazeershaik.ai@gmail.com
+  smtp_auth_identity: nazeershaik.ai@gmail.com
+  smtp_auth_password_file: /etc/alertmanager/secrets/smtp-password
 
 route:
-  receiver: agri-mortgage-webhook
+  receiver: agri-mortgage-notifications
   group_by:
     - alertname
     - service
@@ -11,7 +16,12 @@ route:
   repeat_interval: 4h
 
 receivers:
-  - name: agri-mortgage-webhook
+  - name: agri-mortgage-notifications
     webhook_configs:
       - url: http://agri-mortgage-alert-receiver.agri-mortgage.svc.cluster.local:8080/
         send_resolved: true
+    email_configs:
+      - to: nazeershaik.ai@gmail.com
+        send_resolved: true
+        headers:
+          subject: '[Agri Mortgage] {{ .CommonLabels.alertname }}'
