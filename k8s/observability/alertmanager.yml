@@ -1,0 +1,17 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: agri-mortgage-webhook
+  group_by:
+    - alertname
+    - service
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 4h
+
+receivers:
+  - name: agri-mortgage-webhook
+    webhook_configs:
+      - url: http://agri-mortgage-alert-receiver.agri-mortgage.svc.cluster.local:8080/
+        send_resolved: true

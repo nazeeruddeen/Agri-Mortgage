@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: agri-mortgage-dashboards
+    orgId: 1
+    folder: Agri Mortgage
+    type: file
+    disableDeletion: true
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards
