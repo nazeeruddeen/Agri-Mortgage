@@ -4,9 +4,9 @@ Agricultural mortgage lending platform focused on borrower intake, land parcel c
 
 ## Project Story
 
-This project is the domain-heavy lending application in the production suite.
+This repo is the domain-heavy mortgage application in the startup lending platform.
 
-It demonstrates:
+It currently includes:
 - agricultural borrower onboarding with co-borrowers
 - land parcel capture with district, taluka, village, and appraisal inputs
 - document metadata and review workflow for land and legal readiness

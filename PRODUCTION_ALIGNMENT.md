@@ -27,7 +27,7 @@ Smoke validation status
 - mysql rollout: passed
 - ingress verification: passed
 
-Best demo flow
+Recommended operator walkthrough
 1. Create or inspect an application with parcel and document context.
 2. Show document readiness and encumbrance state as workflow gates.
 3. Advance through review-ready stages only when domain conditions are satisfied.

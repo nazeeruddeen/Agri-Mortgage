@@ -5,13 +5,11 @@ import com.employee.loan_system.entity.UserRole;
 import com.employee.loan_system.repository.AppUserRepository;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile("local")
 @ConditionalOnProperty(name = "app.security.bootstrap-users.enabled", havingValue = "true")
 public class SecurityDataInitializer implements CommandLineRunner {
     private final AppUserRepository appUserRepository;

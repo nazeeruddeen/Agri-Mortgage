@@ -29,4 +29,4 @@ Position in production suite:
 
 - this is the domain-heavy lending project
 - it complements the business lending monolith and the LACR reconciliation project
-- it is intended to demonstrate business-rule modeling, state transitions, retry-aware verification, conflict-safe updates, and reportable mortgage operations rather than just CRUD
+- it is intended to carry business-rule modeling, state transitions, retry-aware verification, conflict-safe updates, and reportable mortgage operations as production capabilities rather than just CRUD

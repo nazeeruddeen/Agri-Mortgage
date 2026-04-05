@@ -11,10 +11,10 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - agri-mortgage.example.com
+        - agri-mortgage.platform.internal
       secretName: agri-mortgage-tls
   rules:
-    - host: agri-mortgage.example.com
+    - host: agri-mortgage.platform.internal
       http:
         paths:
           - path: /api
