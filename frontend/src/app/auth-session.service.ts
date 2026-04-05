@@ -1,5 +1,7 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, Observable, finalize, map, shareReplay, tap, throwError } from 'rxjs';
+import { environment } from '../environments/environment';
 import { AuthResponse, UserInfoResponse } from './agri-mortgage.models';
 
 const STORAGE_KEY = 'agri-mortgage-auth-session';
@@ -14,7 +16,11 @@ interface StoredSession {
 @Injectable({ providedIn: 'root' })
 export class AuthSessionService {
   private readonly sessionSubject = new BehaviorSubject<StoredSession | null>(this.readSession());
+  private readonly serverBaseUrl = environment.apiBaseUrl.replace(/\/$/, '').replace(/\/api\/v1$/, '');
+  private refreshRequest$: Observable<string> | null = null;
   readonly session$ = this.sessionSubject.asObservable();
+
+  constructor(private readonly http: HttpClient) {}
 
   get session(): StoredSession | null {
     return this.sessionSubject.value;
@@ -26,6 +32,10 @@ export class AuthSessionService {
 
   get isAuthenticated(): boolean {
     return !!this.accessToken;
+  }
+
+  get refreshToken(): string | null {
+    return this.session?.refreshToken ?? null;
   }
 
   setSession(response: AuthResponse): void {
@@ -55,6 +65,30 @@ export class AuthSessionService {
   clear(): void {
     localStorage.removeItem(STORAGE_KEY);
     this.sessionSubject.next(null);
+  }
+
+  refreshAccessToken(): Observable<string> {
+    const refreshToken = this.refreshToken;
+    if (!refreshToken) {
+      return throwError(() => new Error('No refresh token available'));
+    }
+
+    if (this.refreshRequest$) {
+      return this.refreshRequest$;
+    }
+
+    this.refreshRequest$ = this.http
+      .post<AuthResponse>(`${this.serverBaseUrl}/auth/refresh`, { refreshToken })
+      .pipe(
+        tap((response) => this.setSession(response)),
+        map((response) => response.accessToken),
+        shareReplay(1),
+        finalize(() => {
+          this.refreshRequest$ = null;
+        })
+      );
+
+    return this.refreshRequest$;
   }
 
   private readSession(): StoredSession | null {
