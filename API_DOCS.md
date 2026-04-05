@@ -11,6 +11,8 @@ Authentication base path: `/auth`
 - `POST /auth/logout`
 - `GET /auth/me`
 
+Browser clients use HttpOnly authentication cookies. `POST /auth/login` and `POST /auth/refresh` both set fresh access and refresh cookies and return session metadata for UI bootstrapping. `POST /auth/logout` revokes the refresh token and clears both cookies. Frontend code should not persist JWTs in `localStorage`.
+
 ## Access Control
 
 Roles used by the project:
