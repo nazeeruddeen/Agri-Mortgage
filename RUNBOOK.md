@@ -78,6 +78,25 @@ This runbook matches the current production hardening in the codebase:
 - Frontend: `npm run build`
 - Full stack: `docker compose up -d --build`
 
+## Playwright golden path
+- Required env:
+  - `AGRI_E2E_PASSWORD`
+  - optional `AGRI_E2E_USERNAME` defaults to `admin`
+  - optional `AGRI_E2E_BASE_URL` defaults to `http://127.0.0.1:4400`
+  - optional `AGRI_E2E_API_BASE_URL` defaults to `http://127.0.0.1:8011`
+- Start the local stack first with `docker compose up -d --build`.
+- Then run `.\node_modules\.bin\playwright.cmd test` from `frontend`.
+- The golden path covers login, intake registration, land parcel capture, and encumbrance verification.
+
+## Local observability
+- Start the monitoring stack from `observability` with `docker compose up -d`.
+- Prometheus: [http://localhost:9092](http://localhost:9092)
+- Grafana: [http://localhost:3002](http://localhost:3002)
+- Default Grafana credentials:
+  - username `admin`
+  - password `admin`
+- The provisioned dashboard scrapes `host.docker.internal:8011/actuator/prometheus`.
+
 ## Minikube smoke deployment
 - Build unique images such as `agri-mortgage-loan-system:smoke-1` and
   `agri-mortgage-loan-system-frontend:smoke-1`.

@@ -2,7 +2,6 @@ package com.employee.loan_system.auth;
 
 import com.employee.loan_system.auth.dto.AuthResponse;
 import com.employee.loan_system.auth.dto.LoginRequest;
-import com.employee.loan_system.auth.dto.RefreshTokenRequest;
 import com.employee.loan_system.auth.dto.UserInfoResponse;
 import com.employee.loan_system.entity.AppUser;
 import com.employee.loan_system.entity.RefreshToken;
@@ -61,8 +60,12 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthResponse refresh(RefreshTokenRequest request) {
-        RefreshToken refreshToken = refreshTokenRepository.findByToken(request.getRefreshToken())
+    public AuthResponse refresh(String refreshTokenValue) {
+        if (refreshTokenValue == null || refreshTokenValue.isBlank()) {
+            throw new RuntimeException("Refresh token is required");
+        }
+
+        RefreshToken refreshToken = refreshTokenRepository.findByToken(refreshTokenValue)
                 .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
 
         if (refreshToken.isRevoked()) {
@@ -85,8 +88,11 @@ public class AuthService {
     }
 
     @Transactional
-    public void logout(RefreshTokenRequest request) {
-        refreshTokenRepository.findByToken(request.getRefreshToken()).ifPresent(token -> {
+    public void logout(String refreshTokenValue) {
+        if (refreshTokenValue == null || refreshTokenValue.isBlank()) {
+            return;
+        }
+        refreshTokenRepository.findByToken(refreshTokenValue).ifPresent(token -> {
             token.setRevoked(true);
             refreshTokenRepository.save(token);
         });

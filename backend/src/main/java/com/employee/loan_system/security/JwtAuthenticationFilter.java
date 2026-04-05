@@ -1,5 +1,6 @@
 package com.employee.loan_system.security;
 
+import com.employee.loan_system.auth.AuthCookieService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,6 +24,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Autowired
     private CustomUserDetailsService customUserDetailsService;
 
+    @Autowired
+    private AuthCookieService authCookieService;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
@@ -34,12 +38,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         final String authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        final String cookieToken = authCookieService.extractAccessToken(request);
+        final String jwtToken;
+        if (cookieToken != null && !cookieToken.isBlank()) {
+            jwtToken = cookieToken;
+        } else if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            jwtToken = authHeader.substring(7);
+        } else {
             filterChain.doFilter(request, response);
             return;
         }
-
-        final String jwtToken = authHeader.substring(7);
         String username;
         try {
             username = jwtService.extractUsername(jwtToken);

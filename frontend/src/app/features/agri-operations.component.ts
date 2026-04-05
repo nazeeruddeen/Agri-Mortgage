@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import {
@@ -30,7 +30,7 @@ import {
               <strong>{{ selectedApplication.applicationNumber }}</strong>
               <p>{{ selectedApplication.primaryApplicantName }}</p>
             </div>
-            <span>{{ selectedApplication.status }}</span>
+            <span data-testid="agri-selected-status">{{ selectedApplication.status }}</span>
           </div>
 
           <div class="detail-grid">
@@ -96,10 +96,10 @@ import {
               </ul>
             </div>
 
-            <button type="button" class="primary" (click)="evaluateSelected.emit()" [disabled]="actionBusy === 'evaluate'">
+            <button type="button" class="primary" (click)="evaluateSelected.emit()" [disabled]="actionBusy === 'evaluate'" data-testid="agri-evaluate-application">
               {{ actionBusy === 'evaluate' ? 'Evaluating...' : 'Run eligibility evaluation' }}
             </button>
-            <button type="button" class="secondary" (click)="runEncumbranceCheck.emit()" [disabled]="actionBusy === 'encumbranceCheck'">
+            <button type="button" class="secondary" (click)="runEncumbranceCheck.emit()" [disabled]="actionBusy === 'encumbranceCheck'" data-testid="agri-run-encumbrance">
               {{ actionBusy === 'encumbranceCheck'
                 ? 'Checking...'
                 : (selectedApplication.encumbranceVerificationStatus === 'GATEWAY_ERROR'
@@ -114,15 +114,15 @@ import {
           <form class="form" [formGroup]="statusForm">
             <label>
               Next status
-              <select formControlName="targetStatus">
+              <select formControlName="targetStatus" data-testid="agri-target-status">
                 <option *ngFor="let status of allowedTransitions(selectedApplication)" [value]="status">{{ status }}</option>
               </select>
             </label>
             <label>
               Remarks
-              <input type="text" formControlName="remarks">
+              <input type="text" formControlName="remarks" data-testid="agri-status-remarks">
             </label>
-            <button type="button" class="secondary" (click)="advanceStatus.emit()" [disabled]="actionBusy === 'advanceStatus' || !allowedTransitions(selectedApplication).length">
+            <button type="button" class="secondary" (click)="advanceStatus.emit()" [disabled]="actionBusy === 'advanceStatus' || !allowedTransitions(selectedApplication).length" data-testid="agri-advance-status">
               {{ actionBusy === 'advanceStatus' ? 'Updating...' : 'Advance status' }}
             </button>
           </form>
@@ -132,9 +132,9 @@ import {
           <h3>Encumbrance result</h3>
           <div class="result-box">
             <strong [class.pass]="selectedApplication.encumbranceVerificationStatus === 'CLEAR'" [class.fail]="selectedApplication.encumbranceVerificationStatus !== 'CLEAR'">
-              {{ encumbranceStatusLabel(selectedApplication.encumbranceVerificationStatus) }}
+              <span data-testid="agri-encumbrance-status">{{ encumbranceStatusLabel(selectedApplication.encumbranceVerificationStatus) }}</span>
             </strong>
-            <p>{{ selectedApplication.encumbranceVerificationSummary || 'Verification has not been executed yet.' }}</p>
+            <p data-testid="agri-encumbrance-summary">{{ selectedApplication.encumbranceVerificationSummary || 'Verification has not been executed yet.' }}</p>
             <small *ngIf="selectedApplication.encumbranceVerifiedAt">Checked at {{ selectedApplication.encumbranceVerifiedAt | date:'medium' }}</small>
           </div>
         </div>
@@ -363,3 +363,8 @@ export class AgriOperationsComponent {
   @Output() verifyDocument = new EventEmitter<{ document: AgriMortgageDocumentResponse; status: AgriMortgageDocumentStatus }>();
   @Output() recordRepayment = new EventEmitter<void>();
 }
+
+
+
+
+

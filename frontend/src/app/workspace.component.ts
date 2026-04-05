@@ -4,6 +4,16 @@ import { Component, OnInit } from '@angular/core';
 import { AbstractControl, FormArray, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, forkJoin, of } from 'rxjs';
+import {
+  buildAgriApplicationForm,
+  buildAgriAuthForm,
+  buildAgriDocumentForm,
+  buildAgriRepaymentForm,
+  buildAgriSearchForm,
+  buildAgriStatusForm,
+  createAgriCoBorrowerGroup,
+  createAgriLandParcelGroup
+} from './agri-workspace.forms';
 import { AgriDashboardComponent } from './features/agri-dashboard.component';
 import { AgriIntakeComponent } from './features/agri-intake.component';
 import { AgriOperationsComponent } from './features/agri-operations.component';
@@ -93,55 +103,16 @@ export class AgriMortgageWorkspaceComponent implements OnInit {
   selectedApplication: AgriMortgageApplicationResponse | null = null;
   loanAccounts: AgriMortgageLoanAccountResponse[] = [];
   selectedLoanAccount: AgriMortgageLoanAccountResponse | null = null;
+  private routeSelectedApplicationId: number | null = null;
+  private refreshSuccessNotice: { kind: NoticeKind; text: string } | null = null;
   reportPage = 0;
 
-  authForm = this.fb.group<any>({
-    username: ['', [Validators.required]],
-    password: ['', [Validators.required]]
-  });
-
-  applicationForm = this.fb.group<any>({
-    primaryApplicantName: ['', [Validators.required, Validators.maxLength(150)]],
-    primaryApplicantAadhaar: ['', [Validators.required, Validators.minLength(12), Validators.maxLength(12)]],
-    primaryApplicantPan: ['', [Validators.required, Validators.maxLength(10)]],
-    primaryMonthlyIncome: [null, [Validators.required, Validators.min(1)]],
-    district: ['', [Validators.required, Validators.maxLength(80)]],
-    taluka: ['', [Validators.required, Validators.maxLength(80)]],
-    village: ['', [Validators.required, Validators.maxLength(80)]],
-    requestedAmount: [null, [Validators.required, Validators.min(1)]],
-    requestedTenureMonths: [36, [Validators.required, Validators.min(1)]],
-    purpose: ['', [Validators.required, Validators.maxLength(200)]],
-    coBorrowers: this.fb.array([this.createCoBorrowerGroup()]),
-    landParcels: this.fb.array([this.createLandParcelGroup()])
-  });
-
-  searchForm = this.fb.group<any>({
-    district: [''],
-    taluka: [''],
-    status: [''],
-    minAmount: [null],
-    size: [10]
-  });
-
-  statusForm = this.fb.group<any>({
-    targetStatus: ['LAND_VERIFICATION', [Validators.required]],
-    remarks: ['Proceed to next stage', [Validators.maxLength(500)]]
-  });
-
-  documentForm = this.fb.group<any>({
-    documentType: ['PATTADAR_PASSBOOK', [Validators.required]],
-    fileName: ['', [Validators.required, Validators.maxLength(180)]],
-    fileReference: ['', [Validators.required, Validators.maxLength(255)]],
-    remarks: ['']
-  });
-
-  repaymentForm = this.fb.group<any>({
-    amount: [null, [Validators.required, Validators.min(0.01)]],
-    paymentMode: ['UPI', [Validators.required]],
-    transactionReference: ['', [Validators.required, Validators.maxLength(120)]],
-    paymentDate: [this.today(), [Validators.required]],
-    notes: ['', [Validators.maxLength(500)]]
-  });
+  authForm = buildAgriAuthForm(this.fb);
+  applicationForm = buildAgriApplicationForm(this.fb);
+  searchForm = buildAgriSearchForm(this.fb);
+  statusForm = buildAgriStatusForm(this.fb);
+  documentForm = buildAgriDocumentForm(this.fb);
+  repaymentForm = buildAgriRepaymentForm(this.fb, this.today());
 
   constructor(
     private readonly fb: FormBuilder,
@@ -155,9 +126,13 @@ export class AgriMortgageWorkspaceComponent implements OnInit {
     this.route.data.subscribe((data) => {
       this.activeTab = (data['tab'] as AppTab | undefined) ?? 'dashboard';
     });
-    if (this.authSession.isAuthenticated) {
-      this.restoreSession();
-    }
+    this.route.queryParamMap.subscribe((params) => {
+      const selectedApplicationId = Number(params.get('selectedApplicationId'));
+      this.routeSelectedApplicationId = Number.isFinite(selectedApplicationId) && selectedApplicationId > 0
+        ? selectedApplicationId
+        : null;
+    });
+    this.restoreSession();
   }
 
   get isAuthenticated(): boolean {
@@ -179,7 +154,7 @@ export class AgriMortgageWorkspaceComponent implements OnInit {
       search: '/applications',
       operations: '/operations'
     };
-    void this.router.navigateByUrl(path[tab]);
+    void this.router.navigate([path[tab]], { queryParams: this.selectionQueryParams() });
   }
 
   login(): void {
@@ -208,9 +183,8 @@ export class AgriMortgageWorkspaceComponent implements OnInit {
   }
 
   logout(): void {
-    const refreshToken = this.authSession.session?.refreshToken;
     this.actionBusy = 'logout';
-    const request = refreshToken ? this.api.logout(refreshToken) : of(void 0);
+    const request = this.authSession.isAuthenticated ? this.api.logout() : of(void 0);
     request.subscribe({
       next: () => this.clearSession('Signed out from the agri mortgage workspace.'),
       error: () => this.clearSession('Session cleared locally after logout attempt.')
@@ -238,27 +212,39 @@ export class AgriMortgageWorkspaceComponent implements OnInit {
         this.districtSummary = districtSummary;
         this.applications = search.content;
         this.loanAccounts = loanAccounts.content;
-        this.selectedApplication = resetSelection
-          ? search.content[0] ?? null
-          : search.content.find((item) => item.id === this.selectedApplication?.id) ?? search.content[0] ?? null;
+        this.selectedApplication = this.routeSelectedApplicationId
+          ? search.content.find((item) => item.id === this.routeSelectedApplicationId) ?? search.content[0] ?? null
+          : resetSelection
+            ? search.content[0] ?? null
+            : search.content.find((item) => item.id === this.selectedApplication?.id) ?? search.content[0] ?? null;
         if (this.selectedApplication) {
           this.patchStatusForm(this.selectedApplication);
           this.syncSelectedLoanAccount(this.selectedApplication);
+        } else if (this.routeSelectedApplicationId) {
+          this.api.getApplication(this.routeSelectedApplicationId).subscribe({
+            next: (application) => this.selectApplication(application),
+            error: () => {
+              this.routeSelectedApplicationId = null;
+              this.syncSelectionQueryParams();
+            }
+          });
         } else {
           this.selectedLoanAccount = null;
         }
         this.pageBusy = false;
-        this.notice = { kind: 'success', text: 'Agri mortgage data refreshed successfully.' };
+        this.notice = this.refreshSuccessNotice ?? { kind: 'success', text: 'Agri mortgage data refreshed successfully.' };
+        this.refreshSuccessNotice = null;
       },
       error: (error) => {
         this.pageBusy = false;
+        this.refreshSuccessNotice = null;
         this.handleError(error, 'Unable to refresh the agri mortgage workspace');
       }
     });
   }
 
   addCoBorrower(): void {
-    this.coBorrowersArray.push(this.createCoBorrowerGroup());
+    this.coBorrowersArray.push(createAgriCoBorrowerGroup(this.fb));
   }
 
   removeCoBorrower(index: number): void {
@@ -268,7 +254,7 @@ export class AgriMortgageWorkspaceComponent implements OnInit {
   }
 
   addLandParcel(): void {
-    this.landParcelsArray.push(this.createLandParcelGroup());
+    this.landParcelsArray.push(createAgriLandParcelGroup(this.fb));
   }
 
   removeLandParcel(index: number): void {
@@ -289,10 +275,11 @@ export class AgriMortgageWorkspaceComponent implements OnInit {
       () => this.api.createApplication(this.applicationForm.getRawValue() as unknown as CreateAgriMortgageApplicationRequest),
       (application) => {
         this.resetApplicationForm();
+        this.routeSelectedApplicationId = application.id;
         this.setTab('search');
+        this.refreshSuccessNotice = { kind: 'success', text: `Draft ${application.applicationNumber} created successfully.` };
         this.refreshAll(true);
         this.selectedApplication = application;
-        this.notice = { kind: 'success', text: `Draft ${application.applicationNumber} created successfully.` };
       },
       'Unable to create agri mortgage application'
     );
@@ -304,10 +291,21 @@ export class AgriMortgageWorkspaceComponent implements OnInit {
       next: (page) => {
         this.pageBusy = false;
         this.applications = page.content;
-        this.selectedApplication = page.content.find((item) => item.id === this.selectedApplication?.id) ?? page.content[0] ?? null;
+        this.selectedApplication = page.content.find((item) => item.id === (this.routeSelectedApplicationId ?? this.selectedApplication?.id))
+          ?? page.content[0]
+          ?? null;
         if (this.selectedApplication) {
           this.patchStatusForm(this.selectedApplication);
           this.syncSelectedLoanAccount(this.selectedApplication);
+        } else if (this.routeSelectedApplicationId) {
+          this.api.getApplication(this.routeSelectedApplicationId).subscribe({
+            next: (application) => this.selectApplication(application),
+            error: () => {
+              this.routeSelectedApplicationId = null;
+              this.syncSelectionQueryParams();
+              this.selectedLoanAccount = null;
+            }
+          });
         } else {
           this.selectedLoanAccount = null;
         }
@@ -334,6 +332,8 @@ export class AgriMortgageWorkspaceComponent implements OnInit {
 
   selectApplication(application: AgriMortgageApplicationResponse): void {
     this.selectedApplication = application;
+    this.routeSelectedApplicationId = application.id;
+    this.syncSelectionQueryParams();
     this.patchStatusForm(application);
     this.syncSelectedLoanAccount(application);
     this.notice = { kind: 'info', text: `Application ${application.applicationNumber} selected.` };
@@ -650,7 +650,7 @@ export class AgriMortgageWorkspaceComponent implements OnInit {
       },
       error: () => {
         this.bootstrapping = false;
-        this.clearSession('Stored session expired. Please sign in again.');
+        this.clearSession('Sign in to load the live agri mortgage workspace.');
       }
     });
   }
@@ -701,6 +701,7 @@ export class AgriMortgageWorkspaceComponent implements OnInit {
 
   private upsertApplication(application: AgriMortgageApplicationResponse): void {
     this.selectedApplication = application;
+    this.routeSelectedApplicationId = application.id;
     this.applications = [application, ...this.applications.filter((item) => item.id !== application.id)];
     this.syncSelectedLoanAccount(application);
   }
@@ -732,32 +733,6 @@ export class AgriMortgageWorkspaceComponent implements OnInit {
     };
   }
 
-  private createCoBorrowerGroup() {
-    return this.fb.group<any>({
-      fullName: ['', [Validators.required, Validators.maxLength(150)]],
-      aadhaar: ['', [Validators.required, Validators.minLength(12), Validators.maxLength(12)]],
-      pan: ['', [Validators.required, Validators.maxLength(10)]],
-      monthlyIncome: [null, [Validators.required, Validators.min(1)]],
-      relationshipType: ['SPOUSE', [Validators.required]]
-    });
-  }
-
-  private createLandParcelGroup() {
-    return this.fb.group<any>({
-      surveyNumber: ['', [Validators.required, Validators.maxLength(50)]],
-      district: ['', [Validators.required, Validators.maxLength(80)]],
-      taluka: ['', [Validators.required, Validators.maxLength(80)]],
-      village: ['', [Validators.required, Validators.maxLength(80)]],
-      areaInAcres: [null, [Validators.required, Validators.min(0.01)]],
-      landType: ['IRRIGATED', [Validators.required]],
-      marketValue: [null, [Validators.required, Validators.min(1)]],
-      govtCircleRate: [null, [Validators.required, Validators.min(1)]],
-      ownershipStatus: ['SOLE', [Validators.required]],
-      encumbranceStatus: ['CLEAR', [Validators.required]],
-      remarks: ['']
-    });
-  }
-
   private resetApplicationForm(): void {
     this.applicationForm.reset({
       primaryApplicantName: '',
@@ -773,8 +748,8 @@ export class AgriMortgageWorkspaceComponent implements OnInit {
     });
     this.coBorrowersArray.clear();
     this.landParcelsArray.clear();
-    this.coBorrowersArray.push(this.createCoBorrowerGroup());
-    this.landParcelsArray.push(this.createLandParcelGroup());
+    this.coBorrowersArray.push(createAgriCoBorrowerGroup(this.fb));
+    this.landParcelsArray.push(createAgriLandParcelGroup(this.fb));
   }
 
   private refreshLoanAccounts(): void {
@@ -806,6 +781,18 @@ export class AgriMortgageWorkspaceComponent implements OnInit {
 
   private today(): string {
     return new Date().toISOString().slice(0, 10);
+  }
+
+  private syncSelectionQueryParams(): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: this.selectionQueryParams(),
+      replaceUrl: true
+    });
+  }
+
+  private selectionQueryParams(): Record<string, number> | {} {
+    return this.routeSelectedApplicationId ? { selectedApplicationId: this.routeSelectedApplicationId } : {};
   }
 
   private touch(control: AbstractControl): void {

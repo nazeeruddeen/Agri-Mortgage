@@ -39,8 +39,8 @@ export class AgriMortgageApiService {
     return this.http.get<UserInfoResponse>(`${this.serverBaseUrl}/auth/me`);
   }
 
-  logout(refreshToken: string): Observable<void> {
-    return this.http.post<void>(`${this.serverBaseUrl}/auth/logout`, { refreshToken });
+  logout(): Observable<void> {
+    return this.http.post<void>(`${this.serverBaseUrl}/auth/logout`, {});
   }
 
   createApplication(payload: CreateAgriMortgageApplicationRequest): Observable<AgriMortgageApplicationResponse> {

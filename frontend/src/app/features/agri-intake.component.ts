@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormArray, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { LandType, OwnershipStatus, RelationshipType, EncumbranceStatus } from '../agri-mortgage.models';
@@ -13,55 +13,55 @@ import { LandType, OwnershipStatus, RelationshipType, EncumbranceStatus } from '
         <h2>Create agri mortgage draft</h2>
         <div class="chip">Backend-driven intake</div>
       </header>
-      <form class="form" [formGroup]="applicationForm">
+      <form class="form" [formGroup]="applicationForm" data-testid="agri-application-form">
         <div class="row">
           <label>
             Primary applicant
-            <input type="text" formControlName="primaryApplicantName">
+            <input type="text" formControlName="primaryApplicantName" data-testid="agri-primary-applicant-name">
           </label>
           <label>
             Aadhaar
-            <input type="text" formControlName="primaryApplicantAadhaar" maxlength="12">
+            <input type="text" formControlName="primaryApplicantAadhaar" maxlength="12" data-testid="agri-primary-applicant-aadhaar">
           </label>
         </div>
         <div class="row">
           <label>
             PAN
-            <input type="text" formControlName="primaryApplicantPan">
+            <input type="text" formControlName="primaryApplicantPan" data-testid="agri-primary-applicant-pan">
           </label>
           <label>
             Monthly income
-            <input type="number" formControlName="primaryMonthlyIncome" min="1">
+            <input type="number" formControlName="primaryMonthlyIncome" min="1" data-testid="agri-primary-income">
           </label>
         </div>
         <div class="row">
           <label>
             District
-            <input type="text" formControlName="district">
+            <input type="text" formControlName="district" data-testid="agri-district">
           </label>
           <label>
             Taluka
-            <input type="text" formControlName="taluka">
+            <input type="text" formControlName="taluka" data-testid="agri-taluka">
           </label>
         </div>
         <div class="row">
           <label>
             Village
-            <input type="text" formControlName="village">
+            <input type="text" formControlName="village" data-testid="agri-village">
           </label>
           <label>
             Requested amount
-            <input type="number" formControlName="requestedAmount" min="1">
+            <input type="number" formControlName="requestedAmount" min="1" data-testid="agri-requested-amount">
           </label>
         </div>
         <div class="row">
           <label>
             Tenure months
-            <input type="number" formControlName="requestedTenureMonths" min="1">
+            <input type="number" formControlName="requestedTenureMonths" min="1" data-testid="agri-requested-tenure">
           </label>
           <label>
             Purpose
-            <textarea rows="3" formControlName="purpose"></textarea>
+            <textarea rows="3" formControlName="purpose" data-testid="agri-purpose"></textarea>
           </label>
         </div>
 
@@ -74,7 +74,7 @@ import { LandType, OwnershipStatus, RelationshipType, EncumbranceStatus } from '
             <div class="row">
               <label>
                 Full name
-                <input type="text" formControlName="fullName">
+                <input type="text" formControlName="fullName" data-testid="agri-coborrower-name">
               </label>
               <label>
                 Aadhaar
@@ -114,31 +114,31 @@ import { LandType, OwnershipStatus, RelationshipType, EncumbranceStatus } from '
             <div class="row">
               <label>
                 Survey number
-                <input type="text" formControlName="surveyNumber">
+                <input type="text" formControlName="surveyNumber" data-testid="agri-land-survey-number">
               </label>
               <label>
                 Area in acres
-                <input type="number" formControlName="areaInAcres" min="0.01" step="0.01">
+                <input type="number" formControlName="areaInAcres" min="0.01" step="0.01" data-testid="agri-land-area">
               </label>
             </div>
             <div class="row">
               <label>
                 District
-                <input type="text" formControlName="district">
+                <input type="text" formControlName="district" data-testid="agri-district">
               </label>
               <label>
                 Taluka
-                <input type="text" formControlName="taluka">
+                <input type="text" formControlName="taluka" data-testid="agri-taluka">
               </label>
             </div>
             <div class="row">
               <label>
                 Village
-                <input type="text" formControlName="village">
+                <input type="text" formControlName="village" data-testid="agri-village">
               </label>
               <label>
                 Land type
-                <select formControlName="landType">
+                <select formControlName="landType" data-testid="agri-land-type">
                   <option *ngFor="let type of landTypes" [value]="type">{{ type }}</option>
                 </select>
               </label>
@@ -146,23 +146,23 @@ import { LandType, OwnershipStatus, RelationshipType, EncumbranceStatus } from '
             <div class="row">
               <label>
                 Market value
-                <input type="number" formControlName="marketValue" min="1">
+                <input type="number" formControlName="marketValue" min="1" data-testid="agri-land-market-value">
               </label>
               <label>
                 Govt circle rate
-                <input type="number" formControlName="govtCircleRate" min="1">
+                <input type="number" formControlName="govtCircleRate" min="1" data-testid="agri-land-circle-rate">
               </label>
             </div>
             <div class="row">
               <label>
                 Ownership status
-                <select formControlName="ownershipStatus">
+                <select formControlName="ownershipStatus" data-testid="agri-land-ownership-status">
                   <option *ngFor="let type of ownershipStatuses" [value]="type">{{ type }}</option>
                 </select>
               </label>
               <label>
                 Encumbrance status
-                <select formControlName="encumbranceStatus">
+                <select formControlName="encumbranceStatus" data-testid="agri-land-encumbrance-status">
                   <option *ngFor="let type of encumbranceStatuses" [value]="type">{{ type }}</option>
                 </select>
               </label>
@@ -179,7 +179,7 @@ import { LandType, OwnershipStatus, RelationshipType, EncumbranceStatus } from '
           </div>
         </div>
 
-        <button type="button" class="primary" (click)="createApplication.emit()" [disabled]="actionBusy === 'createApplication'">
+        <button type="button" class="primary" (click)="createApplication.emit()" [disabled]="actionBusy === 'createApplication'" data-testid="agri-create-application">
           {{ actionBusy === 'createApplication' ? 'Creating...' : 'Create draft application' }}
         </button>
       </form>
@@ -202,3 +202,23 @@ export class AgriIntakeComponent {
   @Output() removeLandParcel = new EventEmitter<number>();
   @Output() createApplication = new EventEmitter<void>();
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

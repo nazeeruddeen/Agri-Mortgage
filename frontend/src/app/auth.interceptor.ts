@@ -5,35 +5,17 @@ import { AuthSessionService } from './auth-session.service';
 
 export const authInterceptor: HttpInterceptorFn = (request, next) => {
   const session = inject(AuthSessionService);
-  const token = session.accessToken;
   const isAuthRequest = request.url.includes('/auth/login') || request.url.includes('/auth/refresh');
+  const credentialedRequest = request.clone({ withCredentials: true });
 
-  if (!token || isAuthRequest) {
-    return next(request);
-  }
-
-  const authorizedRequest = request.clone({
-    setHeaders: {
-      Authorization: `Bearer ${token}`
-    }
-  });
-
-  return next(authorizedRequest).pipe(
+  return next(credentialedRequest).pipe(
     catchError((error: unknown) => {
-      if (!(error instanceof HttpErrorResponse) || error.status !== 401 || !session.refreshToken) {
+      if (!(error instanceof HttpErrorResponse) || error.status !== 401 || isAuthRequest || !session.isAuthenticated) {
         return throwError(() => error);
       }
 
       return session.refreshAccessToken().pipe(
-        switchMap((nextToken) =>
-          next(
-            request.clone({
-              setHeaders: {
-                Authorization: `Bearer ${nextToken}`
-              }
-            })
-          )
-        ),
+        switchMap(() => next(request.clone({ withCredentials: true }))),
         catchError((refreshError) => {
           session.clear();
           return throwError(() => refreshError);

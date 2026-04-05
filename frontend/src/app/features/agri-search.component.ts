@@ -13,7 +13,7 @@ import { AgriMortgageApplicationResponse, AgriMortgageApplicationStatus } from '
         <h2>Search applications</h2>
         <div class="chip">{{ applications.length }} visible</div>
       </header>
-      <form class="form" [formGroup]="searchForm">
+      <form class="form" [formGroup]="searchForm" data-testid="agri-search-form">
         <div class="row">
           <label>
             District
@@ -43,7 +43,7 @@ import { AgriMortgageApplicationResponse, AgriMortgageApplicationStatus } from '
             <input type="number" formControlName="size" min="1">
           </label>
           <div class="inline-actions align-end">
-            <button type="button" class="secondary" (click)="applySearch.emit()">Apply</button>
+            <button type="button" class="secondary" (click)="applySearch.emit()" data-testid="agri-apply-search">Apply</button>
             <button type="button" class="ghost" (click)="clearSearch.emit()">Clear</button>
             <button type="button" class="ghost" (click)="previousPage.emit()" [disabled]="reportPage === 0">Prev</button>
             <button type="button" class="ghost" (click)="nextPage.emit()">Next</button>
@@ -56,7 +56,8 @@ import { AgriMortgageApplicationResponse, AgriMortgageApplicationStatus } from '
           class="list-card list-card--selectable"
           *ngFor="let application of applications"
           (click)="selectApplication.emit(application)"
-          [class.is-selected]="selectedApplication?.id === application.id">
+          [class.is-selected]="selectedApplication?.id === application.id"
+          [attr.data-testid]="'agri-application-card-' + application.id">
           <strong>{{ application.applicationNumber }} - {{ application.primaryApplicantName }}</strong>
           <span>{{ application.district }} - {{ application.taluka }} - ₹{{ formatAmount(application.requestedAmount) }}</span>
           <div class="meta-row">
@@ -140,3 +141,7 @@ export class AgriSearchComponent {
     return `Documents pending (${application.documentSummary.missingRequiredDocuments.length} missing)`;
   }
 }
+
+
+
+

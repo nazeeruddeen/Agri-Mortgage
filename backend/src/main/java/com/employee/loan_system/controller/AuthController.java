@@ -1,10 +1,13 @@
 package com.employee.loan_system.controller;
 
 import com.employee.loan_system.auth.AuthService;
+import com.employee.loan_system.auth.AuthCookieService;
 import com.employee.loan_system.auth.dto.AuthResponse;
 import com.employee.loan_system.auth.dto.LoginRequest;
-import com.employee.loan_system.auth.dto.RefreshTokenRequest;
+import com.employee.loan_system.auth.dto.SessionResponse;
 import com.employee.loan_system.auth.dto.UserInfoResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -16,36 +19,41 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin(originPatterns = "http://localhost:*")
 public class AuthController {
 
     @Autowired
     private AuthService authService;
 
+    @Autowired
+    private AuthCookieService authCookieService;
+
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
         try {
-            AuthResponse response = authService.login(request);
-            return new ResponseEntity<>(response, HttpStatus.OK);
+            AuthResponse authResponse = authService.login(request);
+            authCookieService.writeAuthenticationCookies(response, authResponse);
+            return new ResponseEntity<>(SessionResponse.from(authResponse), HttpStatus.OK);
         } catch (BadCredentialsException ex) {
             return new ResponseEntity<>(ex.getMessage(), HttpStatus.UNAUTHORIZED);
         }
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<?> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+    public ResponseEntity<?> refresh(HttpServletRequest request, HttpServletResponse response) {
         try {
-            AuthResponse response = authService.refresh(request);
-            return new ResponseEntity<>(response, HttpStatus.OK);
+            AuthResponse authResponse = authService.refresh(authCookieService.extractRefreshToken(request));
+            authCookieService.writeAuthenticationCookies(response, authResponse);
+            return new ResponseEntity<>(SessionResponse.from(authResponse), HttpStatus.OK);
         } catch (RuntimeException ex) {
+            authCookieService.clearAuthenticationCookies(response);
             return new ResponseEntity<>(ex.getMessage(), HttpStatus.UNAUTHORIZED);
         }
     }
 
-    @PreAuthorize("isAuthenticated()")
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
-        authService.logout(request);
+    public ResponseEntity<Void> logout(HttpServletRequest request, HttpServletResponse response) {
+        authService.logout(authCookieService.extractRefreshToken(request));
+        authCookieService.clearAuthenticationCookies(response);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 

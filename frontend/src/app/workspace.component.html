@@ -1,19 +1,19 @@
-<ng-container *ngIf="!isAuthenticated; else workspace">
+﻿<ng-container *ngIf="!isAuthenticated; else workspace">
   <div class="login-shell">
     <section class="login-panel">
       <div class="eyebrow">Secure operator access</div>
       <h1>{{ title }}</h1>
       <p>Sign in with a seeded backend user to run the real agri mortgage workflow on <strong>{{ apiBaseUrl }}</strong>.</p>
-      <form class="form" [formGroup]="authForm">
+      <form class="form" [formGroup]="authForm" data-testid="agri-login-form">
         <label>
           Username
-          <input type="text" formControlName="username" placeholder="operator username">
+          <input type="text" formControlName="username" placeholder="operator username" data-testid="agri-login-username">
         </label>
         <label>
           Password
-          <input type="password" formControlName="password" placeholder="provisioned password">
+          <input type="password" formControlName="password" placeholder="provisioned password" data-testid="agri-login-password">
         </label>
-        <button type="button" class="primary" (click)="login()" [disabled]="actionBusy === 'login' || bootstrapping">
+        <button type="button" class="primary" (click)="login()" [disabled]="actionBusy === 'login' || bootstrapping" data-testid="agri-login-submit">
           {{ actionBusy === 'login' ? 'Signing in...' : 'Sign in' }}
         </button>
       </form>
@@ -21,7 +21,7 @@
         <span>Operator access:</span>
         <small>Local bootstrap users are available only when the `local` profile is enabled and credentials are supplied through environment variables.</small>
       </div>
-      <div class="status" [attr.data-kind]="notice.kind">{{ notice.text }}</div>
+      <div class="status" [attr.data-kind]="notice.kind" data-testid="agri-notice">{{ notice.text }}</div>
     </section>
   </div>
 </ng-container>
@@ -37,10 +37,10 @@
         </div>
       </div>
       <nav class="sidebar__nav">
-        <button [class.active]="activeTab === 'dashboard'" (click)="setTab('dashboard')">Overview</button>
-        <button [class.active]="activeTab === 'intake'" (click)="setTab('intake')">Intake</button>
-        <button [class.active]="activeTab === 'search'" (click)="setTab('search')">Applications</button>
-        <button [class.active]="activeTab === 'operations'" (click)="setTab('operations')">Operations</button>
+        <button [class.active]="activeTab === 'dashboard'" (click)="setTab('dashboard')" data-testid="agri-tab-dashboard">Overview</button>
+        <button [class.active]="activeTab === 'intake'" (click)="setTab('intake')" data-testid="agri-tab-intake">Intake</button>
+        <button [class.active]="activeTab === 'search'" (click)="setTab('search')" data-testid="agri-tab-search">Applications</button>
+        <button [class.active]="activeTab === 'operations'" (click)="setTab('operations')" data-testid="agri-tab-operations">Operations</button>
       </nav>
       <button type="button" class="ghost sidebar__logout" (click)="logout()" [disabled]="actionBusy === 'logout'">
         {{ actionBusy === 'logout' ? 'Signing out...' : 'Sign out' }}
@@ -61,7 +61,7 @@
         </div>
       </header>
 
-      <div class="status" [attr.data-kind]="notice.kind">{{ notice.text }}</div>
+      <div class="status" [attr.data-kind]="notice.kind" data-testid="agri-notice">{{ notice.text }}</div>
 
       <app-agri-dashboard
   *ngIf="activeTab === 'dashboard'"
@@ -133,4 +133,13 @@
     </main>
   </div>
 </ng-template>
+
+
+
+
+
+
+
+
+
 

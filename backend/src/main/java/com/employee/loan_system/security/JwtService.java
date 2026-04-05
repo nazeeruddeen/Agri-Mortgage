@@ -2,6 +2,7 @@ package com.employee.loan_system.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.DecodingException;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
@@ -10,6 +11,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
 import java.util.HashMap;
@@ -29,7 +31,7 @@ public class JwtService {
 
     @PostConstruct
     public void init() {
-        byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
+        byte[] keyBytes = decodeSecret(jwtSecret);
         signingKey = Keys.hmacShaKeyFor(keyBytes);
     }
 
@@ -76,5 +78,13 @@ public class JwtService {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+    }
+
+    private byte[] decodeSecret(String secret) {
+        try {
+            return Decoders.BASE64.decode(secret);
+        } catch (DecodingException ex) {
+            return secret.getBytes(StandardCharsets.UTF_8);
+        }
     }
 }
