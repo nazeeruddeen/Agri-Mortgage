@@ -95,7 +95,9 @@ This runbook matches the current production hardening in the codebase:
 - Default Grafana credentials:
   - username `admin`
   - password `admin`
-- The provisioned dashboard scrapes `host.docker.internal:8011/actuator/prometheus`.
+- Local Docker scrapes use [prometheus.local.yml](C:\Users\nazee\Desktop\loan_management\agri-mortgage-loan-system\observability\prometheus.local.yml).
+- Kubernetes-friendly scrape targets live in [prometheus.k8s.yml](C:\Users\nazee\Desktop\loan_management\agri-mortgage-loan-system\observability\prometheus.k8s.yml).
+- Domain alert rules live in [alert-rules.yml](C:\Users\nazee\Desktop\loan_management\agri-mortgage-loan-system\observability\alert-rules.yml).
 
 ## Minikube smoke deployment
 - Build unique images such as `agri-mortgage-loan-system:smoke-1` and

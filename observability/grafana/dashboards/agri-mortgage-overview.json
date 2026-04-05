@@ -2,7 +2,7 @@
   "title": "Agri Mortgage Backend Overview",
   "uid": "agri-mortgage-overview",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "15s",
   "panels": [
     {
@@ -24,58 +24,67 @@
     {
       "id": 2,
       "type": "stat",
-      "title": "HTTP Requests / sec",
+      "title": "Pending Documents",
       "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
       "targets": [
-        { "expr": "sum(rate(http_server_requests_seconds_count{job=\"agri-mortgage-backend\"}[5m]))", "refId": "A" }
+        { "expr": "agri_mortgage_documents_count{state=\"pending\"}", "refId": "A" }
       ]
     },
     {
       "id": 3,
       "type": "stat",
-      "title": "Heap Used",
+      "title": "Gateway Error Cases",
       "gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
       "targets": [
-        { "expr": "sum(jvm_memory_used_bytes{job=\"agri-mortgage-backend\",area=\"heap\"})", "refId": "A" }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes"
-        }
-      }
+        { "expr": "agri_mortgage_encumbrance_status_count{status=\"gateway_error\"}", "refId": "A" }
+      ]
     },
     {
       "id": 4,
       "type": "stat",
-      "title": "Live Threads",
+      "title": "Requested Amount",
       "gridPos": { "h": 5, "w": 6, "x": 18, "y": 0 },
       "targets": [
-        { "expr": "jvm_threads_live_threads{job=\"agri-mortgage-backend\"}", "refId": "A" }
-      ]
+        { "expr": "agri_mortgage_amount{kind=\"requested_total\"}", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "currencyINR" } }
     },
     {
       "id": 5,
       "type": "timeseries",
-      "title": "Request Rate",
+      "title": "Applications by Status",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
       "targets": [
-        { "expr": "sum by (uri) (rate(http_server_requests_seconds_count{job=\"agri-mortgage-backend\",uri!=\"UNKNOWN\"}[5m]))", "legendFormat": "{{uri}}", "refId": "A" }
+        { "expr": "agri_mortgage_applications_status_count", "legendFormat": "{{status}}", "refId": "A" }
       ]
     },
     {
       "id": 6,
       "type": "timeseries",
-      "title": "JVM Heap",
+      "title": "Encumbrance Verification States",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
       "targets": [
-        { "expr": "sum(jvm_memory_used_bytes{job=\"agri-mortgage-backend\",area=\"heap\"})", "legendFormat": "heap used", "refId": "A" },
-        { "expr": "sum(jvm_memory_max_bytes{job=\"agri-mortgage-backend\",area=\"heap\"})", "legendFormat": "heap max", "refId": "B" }
+        { "expr": "agri_mortgage_encumbrance_status_count", "legendFormat": "{{status}}", "refId": "A" }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "bargauge",
+      "title": "Document Readiness",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
+      "targets": [
+        { "expr": "agri_mortgage_documents_count", "legendFormat": "{{state}}", "refId": "A" }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "bargauge",
+      "title": "Portfolio Amounts",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
+      "targets": [
+        { "expr": "agri_mortgage_amount", "legendFormat": "{{kind}}", "refId": "A" }
       ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes"
-        }
-      }
+      "fieldConfig": { "defaults": { "unit": "currencyINR" } }
     }
   ]
 }

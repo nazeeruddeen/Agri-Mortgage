@@ -1,0 +1,32 @@
+groups:
+  - name: agri-mortgage-domain
+    rules:
+      - alert: AgriMortgageGatewayErrorsPresent
+        expr: agri_mortgage_encumbrance_status_count{status="gateway_error"} > 0
+        for: 10m
+        labels:
+          severity: warning
+          service: agri-mortgage
+        annotations:
+          summary: Encumbrance gateway errors are blocking agri cases
+          description: One or more agri mortgage applications are stuck in GATEWAY_ERROR for over 10 minutes.
+
+      - alert: AgriMortgageDocumentsBacklogHigh
+        expr: agri_mortgage_documents_count{state="pending"} > 5
+        for: 20m
+        labels:
+          severity: warning
+          service: agri-mortgage
+        annotations:
+          summary: Required agri mortgage documents are still pending
+          description: More than 5 agri mortgage applications are waiting on document verification.
+
+      - alert: AgriMortgageReviewQueueHigh
+        expr: agri_mortgage_applications_status_count{status=~"credit_review|legal_review"} > 3
+        for: 20m
+        labels:
+          severity: info
+          service: agri-mortgage
+        annotations:
+          summary: Agri review queue is growing
+          description: Credit or legal review queues have remained above 3 for 20 minutes.
