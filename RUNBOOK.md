@@ -77,3 +77,17 @@ This runbook matches the current production hardening in the codebase:
 - Backend: `mvn clean test`
 - Frontend: `npm run build`
 - Full stack: `docker compose up -d --build`
+
+## Minikube smoke deployment
+- Build unique images such as `agri-mortgage-loan-system:smoke-1` and
+  `agri-mortgage-loan-system-frontend:smoke-1`.
+- Load those images with `minikube image load`.
+- Create the smoke secret before backend rollout and ensure
+  `APP_SECURITY_JWT_SECRET` is Base64-encoded.
+- Use the hardened in-repo MySQL manifest and allow it time to pass readiness.
+- Set deployment images explicitly with `kubectl set image`.
+- Scale the backend to one replica for smoke validation if cluster pressure makes
+  the two-replica rollout unnecessary.
+- Verify ingress from the ingress controller pod and expect:
+  - `308 Permanent Redirect` on HTTP
+  - `200 OK` plus frontend HTML on HTTPS
